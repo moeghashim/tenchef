@@ -33,13 +33,16 @@ describe("server integration", () => {
       const root = await fetch(started.url);
       expect(root.status).toBe(200);
 
-      const init = await fetch(`${started.url}/bd/init`, { method: "POST" });
+      const token = started.token;
+      const authHeaders = { "content-type": "application/json", "x-tenchef-token": token };
+
+      const init = await fetch(`${started.url}/bd/init`, { method: "POST", headers: { "x-tenchef-token": token } });
       expect(init.status).toBe(200);
 
       const tasks = buildTasks(["Search"], "Activation");
       const create = await fetch(`${started.url}/bd/create`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: authHeaders,
         body: JSON.stringify({ tasks })
       });
       expect(create.status).toBe(200);
@@ -50,12 +53,12 @@ describe("server integration", () => {
       expect(coreTask?.beadsId).toBeTruthy();
       const close = await fetch(`${started.url}/bd/close`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: authHeaders,
         body: JSON.stringify({ id: coreTask?.beadsId, done: true })
       });
       expect(close.status).toBe(200);
 
-      const list = await fetch(`${started.url}/bd/list`);
+      const list = await fetch(`${started.url}/bd/list`, { headers: { "x-tenchef-token": token } });
       const listed = (await list.json()) as typeof tasks;
       expect(listed.find((task) => task.beadsId === coreTask?.beadsId)?.done).toBe(true);
 

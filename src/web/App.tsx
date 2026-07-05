@@ -17,6 +17,7 @@ const PROVIDER_KEY = "tenchef.provider";
 
 interface RuntimeConfig {
   accent?: string;
+  token?: string;
 }
 
 function loadKeySettings(): KeySettings | null {
@@ -44,10 +45,12 @@ function loadSession(): AppState {
   }
 }
 
-async function postJson<T>(url: string, body: unknown): Promise<T> {
+async function postJson<T>(url: string, body: unknown, token: string | null): Promise<T> {
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  if (token) headers["x-tenchef-token"] = token;
   const response = await fetch(url, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers,
     body: JSON.stringify(body)
   });
   if (!response.ok) {
@@ -60,6 +63,7 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
 export function App() {
   const [state, dispatch] = useReducer(appReducer, undefined, loadSession);
   const [accent, setAccent] = useState(DEFAULT_ACCENT);
+  const [token, setToken] = useState<string | null>(null);
   const [keySettings, setKeySettings] = useState<KeySettings | null>(() => loadKeySettings());
 
   useEffect(() => {
@@ -67,18 +71,20 @@ export function App() {
       .then((response) => (response.ok ? response.json() : {}))
       .then((config: RuntimeConfig) => {
         if (config.accent) setAccent(config.accent);
+        if (config.token) setToken(config.token);
       })
       .catch(() => undefined);
   }, []);
 
   useEffect(() => {
-    fetch("/bd/list")
+    if (!token) return;
+    fetch("/bd/list", { headers: { "x-tenchef-token": token } })
       .then((response) => (response.ok ? response.json() : []))
       .then((tasks: BuildTask[]) => {
         if (Array.isArray(tasks) && tasks.length) dispatch({ type: "HYDRATE_TASKS", tasks });
       })
       .catch(() => undefined);
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     const snapshot: AppState = {
@@ -124,11 +130,11 @@ export function App() {
       const tasksWithIds = state.tasks.some((task) => task.beadsId)
         ? state.tasks
         : await (async () => {
-            await postJson<{ ok: true }>("/bd/init", {});
+            await postJson<{ ok: true }>("/bd/init", {}, token);
             return (
               await postJson<{ tasks: BuildTask[] }>("/bd/create", {
                 tasks: state.tasks
-              })
+              }, token)
             ).tasks;
           })();
       const content = buildPrdMarkdown({
@@ -137,7 +143,7 @@ export function App() {
         comments: state.comments,
         date: new Date()
       });
-      await postJson<{ ok: true }>("/fs/write", { path: "PRD.md", content });
+      await postJson<{ ok: true }>("/fs/write", { path: "PRD.md", content }, token);
       dispatch({ type: "SET_TASKS", tasks: tasksWithIds });
       dispatch({ type: "GENERATE_PRD" });
     } catch (error) {
@@ -152,7 +158,7 @@ export function App() {
     dispatch({ type: "TOGGLE_TASK_LOCAL", id: task.id });
     if (!task.beadsId) return;
     try {
-      await postJson<{ ok: true }>("/bd/close", { id: task.beadsId, done: !task.done });
+      await postJson<{ ok: true }>("/bd/close", { id: task.beadsId, done: !task.done }, token);
     } catch {
       dispatch({ type: "TOGGLE_TASK_LOCAL", id: task.id });
       dispatch({ type: "REVISION_ERROR", message: "Could not update the matching beads task." });
