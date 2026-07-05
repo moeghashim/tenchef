@@ -1,0 +1,86 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: #f7f6f3;
+  color: #18181b;
+  font-family: "Instrument Sans", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+textarea,
+input {
+  font-family: inherit;
+}
+
+::placeholder {
+  color: #a8a8a2;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tc-dark-button:hover {
+  background: #000 !important;
+}
+
+.tc-soft-button:hover {
+  background: #efeee9 !important;
+  color: #18181b !important;
+}
+
+.tc-option:hover,
+.tc-visual-card:hover {
+  border-color: #c7c7c0 !important;
+}
+
+.tc-task-row:hover {
+  border-color: #d6d5ce !important;
+}
+
+.tc-icon-button:hover {
+  color: #18181b !important;
+}
+
+.tc-success-close:hover {
+  color: #1f6b47 !important;
+}
+
+.tc-error-close:hover {
+  color: #8a4b38 !important;
+}
+
+.tc-textarea:focus,
+.tc-input:focus {
+  border-color: #18181b !important;
+}
+
+.annot-soft {
+  background: var(--annot-soft-bg) !important;
+  border-color: var(--annot-soft-bd) !important;
+}
+
+.annot-active {
+  background: var(--annot-active-bg) !important;
+  border-color: var(--annot-active-bd) !important;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: spin 0.7s linear infinite;
+}

@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:#F7F6F3;font-family:'Instrument Sans',system-ui,sans-serif;color:#18181B;-webkit-font-smoothing:antialiased;}
+  :root{--annot-soft-bg:rgb(238,241,253);--annot-soft-bd:rgb(151,167,240);--annot-active-bg:rgb(222,227,250);--annot-active-bd:#2F4FE0;}
+  .annot-soft{background:var(--annot-soft-bg) !important;border-color:var(--annot-soft-bd) !important;}
+  .annot-active{background:var(--annot-active-bg) !important;border-color:var(--annot-active-bd) !important;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .spin{animation:spin .7s linear infinite;}
+  button{font-family:inherit;}
+  textarea,input{font-family:inherit;}
+  ::placeholder{color:#A8A8A2;}
+</style>
+</helmet>
+
+<div style="min-height:100vh;display:flex;flex-direction:column;background:#F7F6F3;">
+
+  <!-- top bar -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 32px;border-bottom:1px solid #ECEBE6;background:rgba(247,246,243,0.85);backdrop-filter:blur(8px);position:sticky;top:0;z-index:30;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:22px;height:22px;border-radius:6px;background:#18181B;display:flex;align-items:center;justify-content:center;">
+        <div style="width:8px;height:8px;border-radius:2px;background:#fff;"></div>
+      </div>
+      <span style="font-size:15px;font-weight:600;letter-spacing:-0.01em;">Scope</span>
+      <span style="font-size:13px;color:#A8A8A2;font-weight:400;">PRD studio</span>
+    </div>
+    <sc-if value="{{ showStepper }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <sc-for list="{{ steps }}" as="s" hint-placeholder-count="3">
+          <div style="{{ s.style }}">{{ s.label }}</div>
+          <div style="{{ s.sepStyle }}"></div>
+        </sc-for>
+      </div>
+    </sc-if>
+    <div style="font-size:13px;color:#A8A8A2;min-width:90px;text-align:right;">{{ topRightLabel }}</div>
+  </div>
+
+  <!-- ============ START ============ -->
+  <sc-if value="{{ isStart }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:48px 24px;">
+      <div style="max-width:620px;width:100%;text-align:center;">
+        <div style="font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#A8A8A2;margin-bottom:22px;">A guided interview</div>
+        <h1 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:62px;line-height:1.04;letter-spacing:-0.02em;margin:0 0 20px;">Let's scope your product.</h1>
+        <p style="font-size:18px;line-height:1.6;color:#5B5B57;margin:0 auto 40px;max-width:480px;">Answer a short set of visual questions. We'll turn them into a plan you can mark up, then a living PRD with a task checklist to build against.</p>
+        <div style="display:flex;gap:0;justify-content:center;align-items:stretch;margin:0 auto 44px;max-width:540px;border:1px solid #ECEBE6;border-radius:16px;overflow:hidden;background:#fff;">
+          <div style="flex:1;padding:22px 16px;border-right:1px solid #ECEBE6;">
+            <div style="font-family:'Instrument Serif',serif;font-size:26px;color:#18181B;">1</div>
+            <div style="font-size:13px;color:#8A8A85;margin-top:4px;">Interview</div>
+          </div>
+          <div style="flex:1;padding:22px 16px;border-right:1px solid #ECEBE6;">
+            <div style="font-family:'Instrument Serif',serif;font-size:26px;color:#18181B;">2</div>
+            <div style="font-size:13px;color:#8A8A85;margin-top:4px;">Review & annotate</div>
+          </div>
+          <div style="flex:1;padding:22px 16px;">
+            <div style="font-family:'Instrument Serif',serif;font-size:26px;color:#18181B;">3</div>
+            <div style="font-size:13px;color:#8A8A85;margin-top:4px;">PRD & build</div>
+          </div>
+        </div>
+        <button onClick="{{ onStart }}" style="display:inline-flex;align-items:center;gap:10px;padding:15px 28px;border-radius:12px;background:#18181B;color:#fff;border:none;cursor:pointer;font-size:16px;font-weight:500;letter-spacing:-0.01em;" style-hover="background:#000;">
+          Start the interview
+          <span style="font-size:18px;line-height:1;">&rarr;</span>
+        </button>
+        <div style="font-size:13px;color:#B0B0AA;margin-top:18px;">8 questions &middot; about 2 minutes</div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ INTERVIEW ============ -->
+  <sc-if value="{{ isInterview }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1;display:flex;flex-direction:column;">
+      <!-- progress -->
+      <div style="max-width:680px;width:100%;margin:0 auto;padding:34px 24px 0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <span style="font-size:13px;color:#A8A8A2;letter-spacing:0.02em;">Question {{ qNumber }} of {{ qTotal }}</span>
+          <span style="font-size:13px;color:#A8A8A2;">{{ qKindLabel }}</span>
+        </div>
+        <div style="height:4px;border-radius:99px;background:#ECEBE6;overflow:hidden;">
+          <div style="{{ progressFillStyle }}"></div>
+        </div>
+      </div>
+
+      <div style="flex:1;display:flex;align-items:flex-start;justify-content:center;padding:44px 24px 120px;">
+        <div style="max-width:680px;width:100%;">
+          <h2 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:44px;line-height:1.08;letter-spacing:-0.02em;margin:0 0 10px;">{{ currentQ.title }}</h2>
+          <p style="font-size:16px;color:#7A7A75;margin:0 0 32px;line-height:1.55;">{{ currentQ.subtitle }}</p>
+
+          <!-- text -->
+          <sc-if value="{{ isText }}" hint-placeholder-val="{{ true }}">
+            <div>
+              <textarea value="{{ textValue }}" onChange="{{ onText }}" placeholder="{{ currentQ.placeholder }}" rows="{{ textRows }}" style="width:100%;border:1px solid #E2E1DC;border-radius:14px;padding:18px 20px;font-size:18px;line-height:1.5;color:#18181B;background:#fff;resize:none;outline:none;" style-focus="border-color:#18181B;"></textarea>
+            </div>
+          </sc-if>
+
+          <!-- single / multi -->
+          <sc-if value="{{ isChoice }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <sc-for list="{{ options }}" as="opt" hint-placeholder-count="4">
+                <button onClick="{{ opt.onToggle }}" style="{{ opt.rowStyle }}" style-hover="border-color:#C7C7C0;">
+                  <div style="{{ opt.indStyle }}">
+                    <sc-if value="{{ opt.selected }}" hint-placeholder-val="{{ false }}">
+                      <div style="{{ opt.innerStyle }}">{{ opt.innerContent }}</div>
+                    </sc-if>
+                  </div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:16px;font-weight:500;letter-spacing:-0.01em;">{{ opt.label }}</div>
+                    <div style="font-size:13.5px;color:#9A9A94;margin-top:2px;">{{ opt.desc }}</div>
+                  </div>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <!-- visual -->
+          <sc-if value="{{ isVisual }}" hint-placeholder-val="{{ true }}">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+              <button onClick="{{ onVisual.minimal }}" style="{{ vStyle.minimal }}" style-hover="border-color:#C7C7C0;">
+                <div style="height:88px;border-radius:9px;background:#F4F3EF;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">
+                  <div style="width:38%;height:7px;border-radius:99px;background:#D6D5CE;"></div>
+                  <div style="width:22%;height:5px;border-radius:99px;background:#E4E3DC;"></div>
+                </div>
+                <div style="text-align:left;margin-top:14px;"><div style="font-size:15px;font-weight:600;">Minimal</div><div style="font-size:13px;color:#9A9A94;margin-top:2px;">Airy, lots of whitespace</div></div>
+              </button>
+              <button onClick="{{ onVisual.editorial }}" style="{{ vStyle.editorial }}" style-hover="border-color:#C7C7C0;">
+                <div style="height:88px;border-radius:9px;background:#F4F3EF;padding:14px;display:flex;flex-direction:column;justify-content:center;gap:7px;">
+                  <div style="width:70%;height:11px;border-radius:3px;background:#CFCEC6;"></div>
+                  <div style="width:90%;height:5px;border-radius:99px;background:#E4E3DC;"></div>
+                  <div style="width:80%;height:5px;border-radius:99px;background:#E4E3DC;"></div>
+                </div>
+                <div style="text-align:left;margin-top:14px;"><div style="font-size:15px;font-weight:600;">Editorial</div><div style="font-size:13px;color:#9A9A94;margin-top:2px;">Serif, typographic</div></div>
+              </button>
+              <button onClick="{{ onVisual.vivid }}" style="{{ vStyle.vivid }}" style-hover="border-color:#C7C7C0;">
+                <div style="height:88px;border-radius:9px;background:#F4F3EF;padding:14px;display:flex;align-items:center;gap:10px;">
+                  <div style="width:34px;height:34px;border-radius:9px;background:#18181B;"></div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:6px;"><div style="width:80%;height:6px;border-radius:99px;background:#D6D5CE;"></div><div style="width:55%;height:6px;border-radius:99px;background:#E4E3DC;"></div></div>
+                </div>
+                <div style="text-align:left;margin-top:14px;"><div style="font-size:15px;font-weight:600;">Vivid</div><div style="font-size:13px;color:#9A9A94;margin-top:2px;">Bold blocks & color</div></div>
+              </button>
+              <button onClick="{{ onVisual.utility }}" style="{{ vStyle.utility }}" style-hover="border-color:#C7C7C0;">
+                <div style="height:88px;border-radius:9px;background:#F4F3EF;padding:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+                  <div style="background:#E1E0D9;border-radius:4px;"></div><div style="background:#E1E0D9;border-radius:4px;"></div><div style="background:#E1E0D9;border-radius:4px;"></div>
+                  <div style="background:#E8E7E0;border-radius:4px;"></div><div style="background:#E8E7E0;border-radius:4px;"></div><div style="background:#E8E7E0;border-radius:4px;"></div>
+                </div>
+                <div style="text-align:left;margin-top:14px;"><div style="font-size:15px;font-weight:600;">Utilitarian</div><div style="font-size:13px;color:#9A9A94;margin-top:2px;">Dense, data-rich</div></div>
+              </button>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+
+      <!-- footer nav -->
+      <div style="position:sticky;bottom:0;border-top:1px solid #ECEBE6;background:rgba(247,246,243,0.9);backdrop-filter:blur(8px);">
+        <div style="max-width:680px;margin:0 auto;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;">
+          <button onClick="{{ onBack }}" style="display:inline-flex;align-items:center;gap:7px;padding:11px 18px;border-radius:10px;background:transparent;border:1px solid transparent;color:#7A7A75;cursor:pointer;font-size:14.5px;" style-hover="background:#EFEEE9;color:#18181B;">
+            <span style="font-size:16px;line-height:1;">&larr;</span> Back
+          </button>
+          <button onClick="{{ onNext }}" style="display:inline-flex;align-items:center;gap:9px;padding:12px 24px;border-radius:11px;background:#18181B;color:#fff;border:none;cursor:pointer;font-size:15px;font-weight:500;" style-hover="background:#000;">
+            {{ nextLabel }} <span style="font-size:16px;line-height:1;">&rarr;</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ PLAN / ANNOTATE ============ -->
+  <sc-if value="{{ isPlan }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1;display:flex;flex-direction:column;">
+      <!-- toolbar -->
+      <div style="border-bottom:1px solid #ECEBE6;background:#fff;">
+        <div style="max-width:1080px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:15px;font-weight:600;letter-spacing:-0.01em;">Review the plan</div>
+            <div style="font-size:13px;color:#9A9A94;">{{ commentHint }}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <button onClick="{{ onToggleComment }}" style="{{ commentBtnStyle }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              {{ commentBtnLabel }}
+            </button>
+            <button onClick="{{ onSendToModel }}" disabled="{{ sendDisabled }}" style="{{ sendBtnStyle }}">
+              <sc-if value="{{ sending }}" hint-placeholder-val="{{ false }}">
+                <span class="spin" style="width:13px;height:13px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;display:inline-block;"></span>
+              </sc-if>
+              <sc-if value="{{ notSending }}" hint-placeholder-val="{{ true }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"></path><path d="m5 12 7-7 7 7"></path></svg>
+              </sc-if>
+              {{ sendBtnLabel }}
+            </button>
+            <button onClick="{{ onGeneratePrd }}" style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:10px;background:#18181B;color:#fff;border:none;cursor:pointer;font-size:14.5px;font-weight:500;" style-hover="background:#000;">
+              Generate PRD <span style="font-size:15px;line-height:1;">&rarr;</span>
+            </button>
+          </div>
+        </div>
+        <sc-if value="{{ hasRevision }}" hint-placeholder-val="{{ false }}">
+          <div style="max-width:1080px;margin:0 auto;padding:0 24px 14px;">
+            <div style="display:flex;align-items:flex-start;gap:11px;padding:13px 16px;border-radius:12px;background:#F0F7F2;border:1px solid #CFE6D8;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1F8A5B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="margin-top:1px;flex:0 0 auto;"><circle cx="12" cy="12" r="10"></circle><polyline points="9 12 11.5 14.5 16 9.5"></polyline></svg>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:13.5px;font-weight:600;color:#1F6B47;">{{ revisionCountLabel }}</div>
+                <div style="font-size:13.5px;color:#3D6651;line-height:1.5;margin-top:2px;">{{ revisionSummary }}</div>
+              </div>
+              <button onClick="{{ onDismissRevision }}" style="background:transparent;border:none;color:#7FA890;cursor:pointer;font-size:16px;line-height:1;padding:0;" style-hover="color:#1F6B47;">&times;</button>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ hasRevError }}" hint-placeholder-val="{{ false }}">
+          <div style="max-width:1080px;margin:0 auto;padding:0 24px 14px;">
+            <div style="display:flex;align-items:center;gap:11px;padding:13px 16px;border-radius:12px;background:#FBF1EE;border:1px solid #EAD2CA;">
+              <div style="flex:1;font-size:13.5px;color:#8A4B38;">{{ revisionError }}</div>
+              <button onClick="{{ onDismissRevision }}" style="background:transparent;border:none;color:#C09A8D;cursor:pointer;font-size:16px;line-height:1;padding:0;" style-hover="color:#8A4B38;">&times;</button>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="flex:1;display:flex;justify-content:center;gap:28px;max-width:1080px;width:100%;margin:0 auto;padding:32px 24px 80px;align-items:flex-start;">
+        <!-- canvas -->
+        <div ref="{{ canvasRef }}" onClick="{{ onCanvasClick }}" style="{{ canvasStyle }}">
+          <div data-annot="Header" class="{{ annotClass.header }}" style="{{ annotStyle.header }}">
+            <div style="font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#A8A8A2;margin-bottom:14px;">Product plan</div>
+            <h1 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:46px;line-height:1.06;letter-spacing:-0.02em;margin:0 0 14px;">{{ plan.productName }}</h1>
+            <p style="font-size:17.5px;line-height:1.6;color:#4D4D49;margin:0;max-width:62ch;">{{ plan.summary }}</p>
+          </div>
+
+          <div style="height:1px;background:#ECEBE6;margin:30px 0;"></div>
+
+          <div data-annot="Audience & goals" class="{{ annotClass.audience }}" style="{{ annotStyle.audience }}">
+            <div>
+              <div style="font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:#A8A8A2;margin-bottom:10px;">Built for</div>
+              <div style="font-size:18px;font-weight:600;letter-spacing:-0.01em;">{{ plan.audienceLabel }}</div>
+              <div style="font-size:14.5px;color:#8A8A85;margin-top:3px;">{{ plan.audienceDesc }}</div>
+              <div style="font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:#A8A8A2;margin:22px 0 10px;">Success measured by</div>
+              <div style="font-size:18px;font-weight:600;letter-spacing:-0.01em;">{{ plan.metricLabel }}</div>
+            </div>
+            <div>
+              <div style="font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:#A8A8A2;margin-bottom:12px;">Primary goals</div>
+              <div style="display:flex;flex-direction:column;gap:11px;">
+                <sc-for list="{{ plan.goals }}" as="g" hint-placeholder-count="3">
+                  <div style="display:flex;gap:10px;align-items:flex-start;">
+                    <div style="{{ bulletStyle }}"></div>
+                    <div style="font-size:15px;line-height:1.5;color:#3A3A36;">{{ g }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <div style="height:1px;background:#ECEBE6;margin:30px 0;"></div>
+
+          <div data-annot="Platforms" class="{{ annotClass.platforms }}" style="{{ annotStyle.platforms }}">
+            <div style="font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:#A8A8A2;margin-bottom:12px;">Platforms &middot; {{ plan.directionLabel }} direction</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+              <sc-for list="{{ plan.platforms }}" as="p" hint-placeholder-count="3">
+                <span style="display:inline-flex;align-items:center;padding:7px 14px;border-radius:99px;border:1px solid #E2E1DC;background:#FBFBF9;font-size:14px;font-weight:500;color:#3A3A36;">{{ p }}</span>
+              </sc-for>
+            </div>
+          </div>
+
+          <div data-annot="Feature scope" class="{{ annotClass.features }}" style="{{ annotStyle.features }}">
+            <div style="font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:#A8A8A2;margin-bottom:14px;">Feature scope &middot; v1</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <sc-for list="{{ plan.features }}" as="f" hint-placeholder-count="4">
+                <div style="display:flex;align-items:center;gap:11px;padding:13px 15px;border:1px solid #ECEBE6;border-radius:11px;background:#fff;">
+                  <div style="{{ bulletStyle }}"></div>
+                  <span style="font-size:14.5px;font-weight:500;color:#2D2D29;">{{ f }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div data-annot="Milestones" class="{{ annotClass.milestones }}" style="{{ annotStyle.milestones }}">
+            <div style="font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:#A8A8A2;margin-bottom:14px;">Milestones &middot; {{ plan.timelineLabel }}</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+              <sc-for list="{{ plan.milestones }}" as="m" hint-placeholder-count="3">
+                <div style="border:1px solid #ECEBE6;border-radius:12px;padding:16px;background:#FBFBF9;">
+                  <div style="font-size:14px;font-weight:600;letter-spacing:-0.01em;margin-bottom:9px;">{{ m.phase }}</div>
+                  <div style="display:flex;flex-direction:column;gap:6px;">
+                    <sc-for list="{{ m.items }}" as="it" hint-placeholder-count="2">
+                      <div style="font-size:13px;color:#8A8A85;line-height:1.4;">{{ it }}</div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- pins -->
+          <sc-for list="{{ comments }}" as="c" hint-placeholder-count="0">
+            <div onClick="{{ c.onPinClick }}" style="{{ c.pinStyle }}">{{ c.num }}</div>
+          </sc-for>
+
+          <!-- pending input -->
+          <sc-if value="{{ hasPending }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ stopProp }}" style="{{ pendingStyle }}">
+              <div style="font-size:12px;color:#9A9A94;margin-bottom:8px;">Comment on <b style="color:#3A3A36;font-weight:600;">{{ pendingTarget }}</b></div>
+              <textarea value="{{ pendingText }}" onChange="{{ onPendingChange }}" placeholder="What should change?" rows="3" autofocus="true" style="width:100%;border:1px solid #E2E1DC;border-radius:9px;padding:10px 12px;font-size:14px;line-height:1.45;resize:none;outline:none;" style-focus="border-color:#18181B;"></textarea>
+              <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:9px;">
+                <button onClick="{{ onPendingCancel }}" style="padding:7px 13px;border-radius:8px;background:transparent;border:1px solid #E2E1DC;color:#7A7A75;cursor:pointer;font-size:13px;">Cancel</button>
+                <button onClick="{{ onPendingSubmit }}" style="{{ pendingSubmitStyle }}">Add comment</button>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+
+        <!-- comments sidebar -->
+        <div style="flex:0 0 296px;position:sticky;top:88px;">
+          <div style="background:#fff;border:1px solid #ECEBE6;border-radius:16px;overflow:hidden;">
+            <div style="padding:16px 18px;border-bottom:1px solid #ECEBE6;display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-size:14px;font-weight:600;">Comments</span>
+              <span style="font-size:12px;color:#A8A8A2;background:#F2F1EC;padding:3px 9px;border-radius:99px;">{{ commentCount }}</span>
+            </div>
+            <sc-if value="{{ hasComments }}" hint-placeholder-val="{{ false }}">
+              <div style="max-height:62vh;overflow:auto;">
+                <sc-for list="{{ comments }}" as="c" hint-placeholder-count="2">
+                  <div onMouseEnter="{{ c.onEnter }}" onMouseLeave="{{ c.onLeave }}" onClick="{{ c.onEnter }}" style="{{ c.rowStyle }}">
+                    <div style="{{ c.chipStyle }}">{{ c.num }}</div>
+                    <div style="flex:1;min-width:0;">
+                      <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:4px;">
+                        <span style="font-size:12px;color:#A8A8A2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;">{{ c.target }}</span>
+                        <sc-if value="{{ c.addressed }}" hint-placeholder-val="{{ false }}">
+                          <span style="{{ c.tagStyle }}">&#10003; Addressed</span>
+                        </sc-if>
+                      </div>
+                      <div style="{{ c.textStyle }}">{{ c.text }}</div>
+                    </div>
+                    <button onClick="{{ c.onDelete }}" style="background:transparent;border:none;color:#C4C4BE;cursor:pointer;font-size:15px;line-height:1;padding:0;" style-hover="color:#18181B;">&times;</button>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ noComments }}" hint-placeholder-val="{{ true }}">
+              <div style="padding:30px 20px;text-align:center;">
+                <div style="font-size:13.5px;color:#A8A8A2;line-height:1.55;">No comments yet. Click <b style="color:#5B5B57;">Comment</b>, then click anywhere on the plan to pin feedback.</div>
+              </div>
+            </sc-if>
+          </div>
+          <button onClick="{{ onBackToInterview }}" style="margin-top:12px;width:100%;padding:11px;border-radius:10px;background:transparent;border:1px solid #E2E1DC;color:#7A7A75;cursor:pointer;font-size:13.5px;" style-hover="background:#EFEEE9;color:#18181B;">&larr; Back to interview</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ PRD ============ -->
+  <sc-if value="{{ isPrd }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1;display:flex;justify-content:center;gap:28px;max-width:1080px;width:100%;margin:0 auto;padding:36px 24px 90px;align-items:flex-start;">
+      <!-- document -->
+      <div style="flex:1;min-width:0;max-width:720px;background:#fff;border:1px solid #ECEBE6;border-radius:18px;padding:48px 52px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div style="font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#A8A8A2;">Product requirements</div>
+          <div style="font-size:12px;color:#B0B0AA;">{{ todayLabel }}</div>
+        </div>
+        <h1 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:48px;line-height:1.05;letter-spacing:-0.02em;margin:0 0 18px;">{{ plan.productName }}</h1>
+        <div style="display:flex;flex-wrap:wrap;gap:18px;margin-bottom:30px;">
+          <div><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#B0B0AA;">For</div><div style="font-size:14px;font-weight:500;margin-top:2px;">{{ plan.audienceLabel }}</div></div>
+          <div style="width:1px;background:#ECEBE6;"></div>
+          <div><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#B0B0AA;">Platforms</div><div style="font-size:14px;font-weight:500;margin-top:2px;">{{ plan.platformsLabel }}</div></div>
+          <div style="width:1px;background:#ECEBE6;"></div>
+          <div><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#B0B0AA;">Target</div><div style="font-size:14px;font-weight:500;margin-top:2px;">{{ plan.timelineLabel }}</div></div>
+        </div>
+
+        <div style="font-family:'Instrument Serif',serif;font-size:22px;letter-spacing:-0.01em;margin:0 0 10px;">Overview</div>
+        <p style="font-size:16px;line-height:1.65;color:#3A3A36;margin:0 0 16px;">{{ plan.summary }}</p>
+        <p style="font-size:16px;line-height:1.65;color:#3A3A36;margin:0 0 34px;">{{ prdProblem }}</p>
+
+        <div style="font-family:'Instrument Serif',serif;font-size:22px;letter-spacing:-0.01em;margin:0 0 14px;">Goals</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:34px;">
+          <sc-for list="{{ plan.goals }}" as="g" hint-placeholder-count="3">
+            <div style="display:flex;gap:11px;align-items:flex-start;">
+              <div style="{{ bulletStyle }}"></div>
+              <div style="font-size:15.5px;line-height:1.55;color:#3A3A36;">{{ g }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- task checklist -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin:0 0 6px;">
+          <div style="font-family:'Instrument Serif',serif;font-size:22px;letter-spacing:-0.01em;">Build checklist</div>
+          <div style="font-size:13px;color:#8A8A85;">{{ doneCount }} / {{ totalCount }} done</div>
+        </div>
+        <div style="height:6px;border-radius:99px;background:#ECEBE6;overflow:hidden;margin:0 0 24px;">
+          <div style="{{ taskFillStyle }}"></div>
+        </div>
+
+        <sc-for list="{{ taskGroups }}" as="grp" hint-placeholder-count="3">
+          <div style="margin-bottom:22px;">
+            <div style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#A8A8A2;margin-bottom:10px;">{{ grp.name }}</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <sc-for list="{{ grp.tasks }}" as="t" hint-placeholder-count="3">
+                <button onClick="{{ t.onToggle }}" style="{{ t.rowStyle }}" style-hover="border-color:#D6D5CE;">
+                  <div style="{{ t.boxStyle }}">
+                    <sc-if value="{{ t.done }}" hint-placeholder-val="{{ false }}">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </sc-if>
+                  </div>
+                  <span style="{{ t.labelStyle }}">{{ t.label }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+
+        <!-- feedback folded in -->
+        <sc-if value="{{ hasComments }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:14px;border-top:1px solid #ECEBE6;padding-top:26px;">
+            <div style="font-family:'Instrument Serif',serif;font-size:22px;letter-spacing:-0.01em;margin-bottom:14px;">Feedback to address</div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <sc-for list="{{ comments }}" as="c" hint-placeholder-count="2">
+                <button onClick="{{ c.onResolve }}" style="{{ c.fbRowStyle }}">
+                  <div style="{{ c.fbBoxStyle }}">
+                    <sc-if value="{{ c.resolved }}" hint-placeholder-val="{{ false }}">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </sc-if>
+                  </div>
+                  <div style="flex:1;text-align:left;">
+                    <div style="font-size:12px;color:#A8A8A2;">{{ c.target }}</div>
+                    <div style="{{ c.fbTextStyle }}">{{ c.text }}</div>
+                  </div>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+
+      <!-- side rail -->
+      <div style="flex:0 0 268px;position:sticky;top:88px;">
+        <div style="background:#fff;border:1px solid #ECEBE6;border-radius:16px;padding:22px;text-align:center;">
+          <div style="font-family:'Instrument Serif',serif;font-size:42px;line-height:1;letter-spacing:-0.01em;">{{ progressLabel }}</div>
+          <div style="font-size:13px;color:#9A9A94;margin-top:6px;">of the build complete</div>
+          <div style="height:1px;background:#ECEBE6;margin:18px 0;"></div>
+          <div style="font-size:13px;color:#8A8A85;line-height:1.55;text-align:left;">Hand this PRD to your build agent. Check tasks off as they ship &mdash; the progress updates live.</div>
+        </div>
+        <button onClick="{{ onBackToPlan }}" style="margin-top:12px;width:100%;padding:11px;border-radius:10px;background:transparent;border:1px solid #E2E1DC;color:#7A7A75;cursor:pointer;font-size:13.5px;" style-hover="background:#EFEEE9;color:#18181B;">&larr; Back to plan</button>
+        <button onClick="{{ onRestart }}" style="margin-top:8px;width:100%;padding:11px;border-radius:10px;background:transparent;border:none;color:#B0B0AA;cursor:pointer;font-size:13px;" style-hover="color:#18181B;">Start over</button>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;accent&quot;: { &quot;editor&quot;:&quot;color&quot;, &quot;default&quot;:&quot;#2F4FE0&quot;, &quot;options&quot;:[&quot;#2F4FE0&quot;,&quot;#E0562F&quot;,&quot;#1F8A5B&quot;,&quot;#7A3FF0&quot;], &quot;tsType&quot;:&quot;string&quot; },
+  &quot;autoAdvance&quot;: { &quot;editor&quot;:&quot;boolean&quot;, &quot;default&quot;:true, &quot;tsType&quot;:&quot;boolean&quot; },
+  &quot;showStepper&quot;: { &quot;editor&quot;:&quot;boolean&quot;, &quot;default&quot;:true, &quot;tsType&quot;:&quot;boolean&quot; }
+}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.canvasRef = React.createRef();
+
+    this.AUDIENCE = [
+      { id:'consumers', label:'Consumers', desc:'Everyday individuals' },
+      { id:'business', label:'Businesses', desc:'Teams & companies' },
+      { id:'internal', label:'Internal teams', desc:'People inside your org' },
+      { id:'developers', label:'Developers', desc:'Technical builders & APIs' },
+    ];
+    this.PLATFORMS = [
+      { id:'web', label:'Web' }, { id:'ios', label:'iOS' }, { id:'android', label:'Android' },
+      { id:'desktop', label:'Desktop' }, { id:'api', label:'API / headless' },
+    ];
+    this.FEATURES = [
+      { id:'auth', label:'Accounts & auth' }, { id:'realtime', label:'Realtime sync' },
+      { id:'notifs', label:'Notifications' }, { id:'search', label:'Search' },
+      { id:'analytics', label:'Analytics dashboard' }, { id:'integrations', label:'Integrations' },
+      { id:'offline', label:'Offline mode' }, { id:'collab', label:'Collaboration' },
+    ];
+    this.METRIC = [
+      { id:'activation', label:'Activation', desc:'New users reach the aha moment' },
+      { id:'retention', label:'Retention', desc:'People keep coming back' },
+      { id:'revenue', label:'Revenue', desc:'Conversion & paid growth' },
+      { id:'engagement', label:'Daily engagement', desc:'Frequent, sticky usage' },
+    ];
+    this.TIMELINE = [
+      { id:'asap', label:'Under a month', desc:'Ship a tight v1 fast' },
+      { id:'quarter', label:'This quarter', desc:'~3 months of runway' },
+      { id:'half', label:'Within 6 months', desc:'Room for a fuller scope' },
+      { id:'open', label:'No fixed date', desc:'Quality over deadline' },
+    ];
+    this.DIRECTION = { minimal:'Minimal', editorial:'Editorial', vivid:'Vivid', utility:'Utilitarian' };
+
+    this.QUESTIONS = [
+      { id:'name', type:'text', kind:'Short answer', title:'What are you building?', subtitle:'A working name and one line is enough \u2014 you can refine it later.', placeholder:'e.g. Pulse \u2014 async team check-ins', rows:2 },
+      { id:'audience', type:'single', kind:'Single select', title:'Who is it primarily for?', subtitle:'Pick the one audience that matters most for v1.', options:this.AUDIENCE },
+      { id:'problem', type:'text', kind:'Short answer', title:'What problem does it solve?', subtitle:'One or two sentences on the pain you are removing.', placeholder:'Teams lose context between standups and...', rows:4 },
+      { id:'platforms', type:'multi', kind:'Multi select', title:'Where should it run?', subtitle:'Select every surface you need at launch.', options:this.PLATFORMS },
+      { id:'direction', type:'visual', kind:'Pick a look', title:'Which visual direction fits?', subtitle:'A starting aesthetic for the product.', },
+      { id:'features', type:'multi', kind:'Multi select', title:'What are the must-have features for v1?', subtitle:'Be ruthless \u2014 these become your build checklist.', options:this.FEATURES },
+      { id:'metric', type:'single', kind:'Single select', title:'What does success look like?', subtitle:'The one number you will watch.', options:this.METRIC },
+      { id:'timeline', type:'single', kind:'Single select', title:'What is your target for v1?', subtitle:'Sets the milestone pacing in your plan.', options:this.TIMELINE },
+    ];
+
+    this.state = {
+      screen:'start', qIndex:0,
+      answers:{ platforms:[], features:[] },
+      commentMode:false, comments:[], pending:null, nextNum:1, hoveredAnnot:null,
+      tasks:[], plan:null,
+      sending:false, revision:null, revisionError:null,
+    };
+  }
+
+  buildTasks = (features, metricLabel) => {
+    let n = 0;
+    const mk = (label, group) => ({ id:'t'+(n++), label, group, done:false });
+    return [
+      mk('Set up repo, CI & environments','Foundation'),
+      mk('Authentication & user accounts','Foundation'),
+      mk('Design system & app shell','Foundation'),
+      ...features.map(f => mk(f, 'Core features')),
+      mk('Wire up '+(metricLabel||'adoption').toLowerCase()+' analytics','Launch'),
+      mk('QA pass & bug bash','Launch'),
+      mk('Launch & rollout plan','Launch'),
+    ];
+  };
+
+  get accent() { return this.props.accent || '#2F4FE0'; }
+  // opaque blend of accent over the white card, so html-to-image / capture render it reliably
+  tint(alpha) {
+    const h = (this.accent || '#2F4FE0').replace('#','');
+    const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16);
+    const m = (c) => Math.round(c*alpha + 255*(1-alpha));
+    return 'rgb('+m(r)+','+m(g)+','+m(b)+')';
+  }
+  get autoAdvance() { return this.props.autoAdvance !== false; }
+
+  // ---------- nav ----------
+  start = () => this.setState({ screen:'interview', qIndex:0 });
+
+  setText = (e) => {
+    const q = this.QUESTIONS[this.state.qIndex];
+    const v = e.target.value;
+    this.setState(s => ({ answers:{ ...s.answers, [q.id]:v } }));
+  };
+
+  selectSingle = (qid, optId) => {
+    this.setState(s => ({ answers:{ ...s.answers, [qid]:optId } }));
+    if (this.autoAdvance) setTimeout(() => this.next(), 220);
+  };
+
+  toggleMulti = (qid, optId) => {
+    this.setState(s => {
+      const cur = Array.isArray(s.answers[qid]) ? s.answers[qid] : [];
+      const has = cur.includes(optId);
+      return { answers:{ ...s.answers, [qid]: has ? cur.filter(x=>x!==optId) : [...cur, optId] } };
+    });
+  };
+
+  selectVisual = (id) => {
+    this.setState(s => ({ answers:{ ...s.answers, direction:id } }));
+    if (this.autoAdvance) setTimeout(() => this.next(), 220);
+  };
+
+  back = () => {
+    if (this.state.qIndex === 0) this.setState({ screen:'start' });
+    else this.setState(s => ({ qIndex: s.qIndex - 1 }));
+  };
+
+  next = () => {
+    const { qIndex } = this.state;
+    if (qIndex >= this.QUESTIONS.length - 1) { this.buildPlan(); this.setState({ screen:'plan' }); }
+    else this.setState({ qIndex: qIndex + 1 });
+  };
+
+  // ---------- plan ----------
+  buildPlan = () => {
+    const a = this.state.answers;
+    const name = (a.name || '').trim() || 'Untitled Product';
+    const aud = this.AUDIENCE.find(o => o.id === a.audience) || { label:'Users', desc:'A broad audience' };
+    const platforms = (a.platforms || []).map(id => this.PLATFORMS.find(p => p.id===id)?.label).filter(Boolean);
+    if (!platforms.length) platforms.push('Web');
+    const features = (a.features || []).map(id => this.FEATURES.find(f => f.id===id)?.label).filter(Boolean);
+    if (!features.length) features.push('Core experience');
+    const metric = this.METRIC.find(o => o.id === a.metric) || { label:'Adoption' };
+    const timeline = this.TIMELINE.find(o => o.id === a.timeline) || { label:'This quarter' };
+    const dir = this.DIRECTION[a.direction] || 'Minimal';
+    const problem = (a.problem || '').trim();
+
+    const summary = problem
+      ? `${name} is a ${dir.toLowerCase()} product for ${aud.label.toLowerCase()}. ${problem.charAt(0).toUpperCase()+problem.slice(1)}`
+      : `${name} is a ${dir.toLowerCase()} product for ${aud.label.toLowerCase()}, focused on a sharp, well-scoped v1.`;
+
+    const goals = [
+      `Deliver a focused v1 that lets ${aud.label.toLowerCase()} ${problem ? 'solve the problem above' : 'get value in the first session'}.`,
+      `Optimize the first run for ${metric.label.toLowerCase()} as the headline metric.`,
+      `Ship across ${platforms.join(', ')} without diluting the core flow.`,
+    ];
+
+    // milestones
+    const half = Math.ceil(features.length / 2);
+    const milestones = [
+      { phase:'Foundation', items:['Project scaffold & environments','Auth & data model','UI shell'] },
+      { phase:'Core build', items: features.slice(0, half) },
+      { phase:'Launch', items: [...features.slice(half), 'QA & instrumentation', 'Rollout'] },
+    ];
+
+    const tasks = this.buildTasks(features, metric.label);
+
+    this.setState({
+      revision:null, revisionError:null,
+      tasks,
+      plan: {
+        productName:name, summary,
+        audienceLabel:aud.label, audienceDesc:aud.desc,
+        metricLabel:metric.label, timelineLabel:timeline.label,
+        directionLabel:dir, platforms, platformsLabel:platforms.join(' \u00b7 '),
+        features, goals, milestones, problem,
+      },
+    });
+  };
+
+  // ---------- send to model (revise plan from comments) ----------
+  dismissRevision = () => this.setState({ revision:null, revisionError:null });
+
+  sendToModel = async () => {
+    const plan = this.state.plan;
+    const pending = this.state.comments.filter(c => !c.addressed);
+    if (!plan || !pending.length || this.state.sending) return;
+    if (!(window.claude && window.claude.complete)) {
+      this.setState({ revisionError:'The model is only reachable in the live preview. Try again there.' });
+      return;
+    }
+    this.setState({ sending:true, revisionError:null, revision:null, commentMode:false, pending:null });
+
+    const planForModel = {
+      productName: plan.productName, summary: plan.summary, goals: plan.goals,
+      platforms: plan.platforms, features: plan.features, milestones: plan.milestones,
+    };
+    const commentsText = pending.map((c,i) => `${i+1}. [section: ${c.target}] ${c.text}`).join('\n');
+    const prompt =
+      'You are a senior product manager revising a product plan based on reviewer comments.\n\n' +
+      'CURRENT PLAN (JSON):\n' + JSON.stringify(planForModel) + '\n\n' +
+      'REVIEWER COMMENTS (each tied to a section of the plan):\n' + commentsText + '\n\n' +
+      'Revise the plan so that every comment is fully addressed. Keep it tight, concrete and realistic. ' +
+      'Return ONLY minified JSON (no markdown fences, no commentary) with EXACTLY these keys: ' +
+      'productName (string), summary (string, 1-2 sentences), goals (array of 3 short strings), ' +
+      'platforms (array of strings), features (array of short strings), ' +
+      'milestones (array of objects each {phase:string, items:array of short strings}), ' +
+      'changeSummary (string, one sentence describing what you changed).';
+
+    try {
+      const raw = await window.claude.complete({ messages:[{ role:'user', content: prompt }] });
+      let txt = (raw || '').trim();
+      txt = txt.replace(/^```(?:json)?/i, '').replace(/```$/,'').trim();
+      const a = txt.indexOf('{'), b = txt.lastIndexOf('}');
+      if (a >= 0 && b > a) txt = txt.slice(a, b + 1);
+      const rev = JSON.parse(txt);
+
+      this.setState(s => {
+        const np = { ...s.plan };
+        if (rev.productName) np.productName = String(rev.productName);
+        if (rev.summary) np.summary = String(rev.summary);
+        if (Array.isArray(rev.goals) && rev.goals.length) np.goals = rev.goals.map(String);
+        if (Array.isArray(rev.platforms) && rev.platforms.length) {
+          np.platforms = rev.platforms.map(String);
+          np.platformsLabel = np.platforms.join(' \u00b7 ');
+        }
+        if (Array.isArray(rev.features) && rev.features.length) np.features = rev.features.map(String);
+        if (Array.isArray(rev.milestones) && rev.milestones.length)
+          np.milestones = rev.milestones.map(m => ({ phase:String(m.phase || ''), items:(m.items || []).map(String) }));
+        const tasks = this.buildTasks(np.features, np.metricLabel);
+        const comments = s.comments.map(c => c.addressed ? c : { ...c, addressed:true, resolved:true });
+        return {
+          plan:np, tasks, comments, sending:false,
+          revision:{ summary: rev.changeSummary ? String(rev.changeSummary) : 'Plan updated to address your comments.', count: pending.length },
+        };
+      });
+    } catch (e) {
+      this.setState({ sending:false, revisionError:'Could not revise the plan from your comments. Please try again.' });
+    }
+  };
+
+  // ---------- annotation ----------
+  toggleComment = () => this.setState(s => ({ commentMode: !s.commentMode, pending:null }));
+
+  onCanvasClick = (e) => {
+    if (!this.state.commentMode) return;
+    const canvas = e.currentTarget;
+    if (!canvas) return;
+    const annot = e.target.closest('[data-annot]');
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const target = annot ? annot.getAttribute('data-annot') : 'Plan';
+    this.setState({ pending:{ x, y, target, text:'' } });
+  };
+
+  onPendingChange = (e) => {
+    const v = e.target.value;
+    this.setState(s => ({ pending: s.pending ? { ...s.pending, text:v } : null }));
+  };
+  cancelPending = () => this.setState({ pending:null });
+  submitPending = () => {
+    this.setState(s => {
+      const p = s.pending;
+      if (!p || !p.text.trim()) return { pending:null };
+      const c = { num:s.nextNum, x:p.x, y:p.y, target:p.target, text:p.text.trim(), resolved:false };
+      return { comments:[...s.comments, c], nextNum:s.nextNum+1, pending:null };
+    });
+  };
+  deleteComment = (num) => this.setState(s => ({ comments: s.comments.filter(c => c.num !== num) }));
+  setHovered = (key) => this.setState({ hoveredAnnot: key });
+  resolveComment = (num) => this.setState(s => ({ comments: s.comments.map(c => c.num===num ? { ...c, resolved:!c.resolved } : c) }));
+
+  // ---------- prd ----------
+  toggleTask = (id) => this.setState(s => ({ tasks: s.tasks.map(t => t.id===id ? { ...t, done:!t.done } : t) }));
+  generatePrd = () => this.setState({ screen:'prd', commentMode:false, pending:null });
+  restart = () => this.setState({ screen:'start', qIndex:0, answers:{ platforms:[], features:[] }, comments:[], tasks:[], plan:null, nextNum:1 });
+
+  // ---------- style helpers ----------
+  optRowStyle(sel) {
+    return { display:'flex', alignItems:'flex-start', gap:'14px', width:'100%', textAlign:'left',
+      padding:'16px 18px', borderRadius:'14px', cursor:'pointer', font:'inherit', color:'#18181B',
+      border:'1px solid '+(sel?this.accent:'#E7E6E1'),
+      background: sel ? this.accent+'0F' : '#fff', transition:'all .14s ease' };
+  }
+  indStyle(sel, multi) {
+    return { flex:'0 0 auto', width:'22px', height:'22px', marginTop:'1px',
+      borderRadius: multi ? '7px' : '50%',
+      border:'1px solid '+(sel?this.accent:'#C9C8C2'),
+      background: sel ? this.accent : '#fff',
+      display:'flex', alignItems:'center', justifyContent:'center', transition:'all .14s' };
+  }
+  visualCardStyle(sel) {
+    return { padding:'14px', borderRadius:'16px', cursor:'pointer', font:'inherit', textAlign:'left',
+      border:'1px solid '+(sel?this.accent:'#E7E6E1'),
+      background: sel ? this.accent+'0A' : '#fff', transition:'all .14s' };
+  }
+
+  renderVals() {
+    const s = this.state;
+    const accent = this.accent;
+    const q = this.QUESTIONS[s.qIndex] || this.QUESTIONS[0];
+
+    // stepper
+    const order = ['interview','plan','prd'];
+    const labels = { interview:'Interview', plan:'Review', prd:'PRD' };
+    const curIdx = order.indexOf(s.screen);
+    const steps = order.map((k,i) => {
+      const active = k === s.screen;
+      const done = curIdx > i && curIdx !== -1;
+      return {
+        label: labels[k],
+        style: { fontSize:'12.5px', padding:'5px 11px', borderRadius:'99px',
+          color: active ? '#fff' : (done ? accent : '#A8A8A2'),
+          background: active ? '#18181B' : 'transparent',
+          fontWeight: active ? 600 : 500, transition:'all .15s' },
+        sepStyle: { width:'14px', height:'1px', background:'#DAD9D3', display: i<order.length-1 ? 'block':'none' },
+      };
+    });
+
+    // interview options
+    let options = [];
+    if (q.type === 'single' || q.type === 'multi') {
+      const multi = q.type === 'multi';
+      const selVal = s.answers[q.id];
+      options = (q.options || []).map(o => {
+        const sel = multi ? (Array.isArray(selVal) && selVal.includes(o.id)) : selVal === o.id;
+        return {
+          id:o.id, label:o.label, desc:o.desc || '',
+          selected: sel,
+          rowStyle: this.optRowStyle(sel),
+          indStyle: this.indStyle(sel, multi),
+          innerStyle: multi
+            ? { color:'#fff', fontSize:'12px', fontWeight:700, lineHeight:1 }
+            : { width:'8px', height:'8px', borderRadius:'50%', background:'#fff' },
+          innerContent: multi ? '\u2713' : '',
+          onToggle: () => multi ? this.toggleMulti(q.id, o.id) : this.selectSingle(q.id, o.id),
+        };
+      });
+    }
+
+    // visual
+    const dsel = s.answers.direction;
+    const vStyle = {
+      minimal: this.visualCardStyle(dsel==='minimal'),
+      editorial: this.visualCardStyle(dsel==='editorial'),
+      vivid: this.visualCardStyle(dsel==='vivid'),
+      utility: this.visualCardStyle(dsel==='utility'),
+    };
+    const onVisual = {
+      minimal: () => this.selectVisual('minimal'),
+      editorial: () => this.selectVisual('editorial'),
+      vivid: () => this.selectVisual('vivid'),
+      utility: () => this.selectVisual('utility'),
+    };
+
+    const progressPct = Math.round(((s.qIndex) / this.QUESTIONS.length) * 100) + Math.round((1/this.QUESTIONS.length)*100*0.0);
+    const fillPct = Math.round(((s.qIndex+1) / this.QUESTIONS.length) * 100);
+
+    // comments (shared)
+    const success = '#1F8A5B';
+    const commentedTargets = new Set(s.comments.filter(c => !c.addressed).map(c => c.target));
+    const pendingCount = s.comments.filter(c => !c.addressed).length;
+    const activeAnnot = s.hoveredAnnot || (s.pending ? s.pending.target : null);
+    const comments = s.comments.map(c => ({
+      num:c.num, target:c.target, text:c.text, resolved:c.resolved, addressed:!!c.addressed,
+      onEnter: () => this.setHovered(c.target),
+      onLeave: () => this.setHovered(null),
+      rowStyle: { padding:'14px 18px', borderBottom:'1px solid #F2F1EC', display:'flex', gap:'11px',
+        cursor:'pointer', transition:'background .14s ease',
+        background: s.hoveredAnnot === c.target ? accent+'0E' : 'transparent' },
+      tagStyle: { display:'inline-flex', alignItems:'center', gap:'4px', fontSize:'11px', fontWeight:600, flexShrink:0, whiteSpace:'nowrap',
+        color:success, background:success+'14', padding:'2px 7px', borderRadius:'99px' },
+      textStyle: { fontSize:'14px', lineHeight:'1.45', color: c.addressed ? '#9A9A94' : '#2D2D29' },
+      pinStyle: { position:'absolute', left:c.x+'px', top:c.y+'px', transform:'translate(-50%,-50%)',
+        width:'26px', height:'26px', borderRadius:'50% 50% 50% 2px', background:(c.addressed?success:accent), color:'#fff',
+        fontSize:'12.5px', fontWeight:600, display:'flex', alignItems:'center', justifyContent:'center',
+        cursor:'pointer', boxShadow:'0 2px 8px '+(c.addressed?success:accent)+'55', zIndex:5 },
+      chipStyle: { flex:'0 0 auto', width:'22px', height:'22px', borderRadius:'50% 50% 50% 2px',
+        background:(c.addressed?success:accent), color:'#fff', fontSize:'12px', fontWeight:600,
+        display:'flex', alignItems:'center', justifyContent:'center' },
+      onDelete: () => this.deleteComment(c.num),
+      onPinClick: (e) => { e.stopPropagation(); },
+      onResolve: () => this.resolveComment(c.num),
+      fbRowStyle: { display:'flex', gap:'12px', alignItems:'flex-start', width:'100%', textAlign:'left',
+        padding:'13px 15px', borderRadius:'12px', cursor:'pointer', font:'inherit',
+        border:'1px solid #ECEBE6', background: c.resolved ? '#FAFAF8' : '#fff', transition:'all .14s' },
+      fbBoxStyle: { flex:'0 0 auto', width:'20px', height:'20px', borderRadius:'6px', marginTop:'1px',
+        border:'1px solid '+(c.resolved?accent:'#CFCEC8'), background:c.resolved?accent:'#fff',
+        display:'flex', alignItems:'center', justifyContent:'center' },
+      fbTextStyle: { fontSize:'14.5px', lineHeight:'1.45', color: c.resolved ? '#A8A8A2' : '#2D2D29',
+        textDecoration: c.resolved ? 'line-through' : 'none', marginTop:'2px' },
+    }));
+
+    // annotation block highlights
+    // layout-only base (colors come from .annot-soft / .annot-active classes, which use !important
+    // to beat the data-annot instrumentation that neutralizes inline color props)
+    const annotStyleFor = (extra) => ({ borderRadius:'12px', padding:'10px 14px', marginLeft:'-16px', marginRight:'-16px',
+      borderWidth:'2px', borderStyle:'solid', borderColor:'transparent', ...extra });
+    const annotStyle = {
+      header: annotStyleFor({ marginTop:'-6px' }),
+      audience: annotStyleFor({ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'28px' }),
+      platforms: annotStyleFor({ marginBottom:'30px' }),
+      features: annotStyleFor({ marginBottom:'30px' }),
+      milestones: annotStyleFor({ marginBottom:'6px' }),
+    };
+    const classFor = (key) => activeAnnot === key ? 'annot-active' : (commentedTargets.has(key) ? 'annot-soft' : '');
+    const annotClass = {
+      header: classFor('Header'), audience: classFor('Audience & goals'), platforms: classFor('Platforms'),
+      features: classFor('Feature scope'), milestones: classFor('Milestones'),
+    };
+
+    // tasks grouped
+    const groupOrder = ['Foundation','Core features','Launch'];
+    const taskGroups = groupOrder.map(name => ({
+      name,
+      tasks: s.tasks.filter(t => t.group === name).map(t => ({
+        id:t.id, label:t.label, done:t.done,
+        onToggle: () => this.toggleTask(t.id),
+        rowStyle: { display:'flex', alignItems:'center', gap:'12px', width:'100%', textAlign:'left',
+          padding:'13px 15px', borderRadius:'11px', cursor:'pointer', font:'inherit',
+          border:'1px solid '+(t.done?'#E7E6E1':'#ECEBE6'), background: t.done ? '#FAFAF8':'#fff', transition:'all .14s' },
+        boxStyle: { flex:'0 0 auto', width:'20px', height:'20px', borderRadius:'6px',
+          border:'1px solid '+(t.done?accent:'#CFCEC8'), background:t.done?accent:'#fff',
+          display:'flex', alignItems:'center', justifyContent:'center', transition:'all .14s' },
+        labelStyle: { fontSize:'15px', fontWeight:500, color: t.done ? '#A8A8A2':'#2D2D29',
+          textDecoration: t.done ? 'line-through':'none' },
+      })),
+    })).filter(g => g.tasks.length);
+
+    const totalCount = s.tasks.length;
+    const doneCount = s.tasks.filter(t => t.done).length;
+    const pct = totalCount ? Math.round(doneCount/totalCount*100) : 0;
+
+    const plan = s.plan || {};
+    const pending = s.pending;
+
+    return {
+      // tweaks
+      showStepper: this.props.showStepper !== false,
+      steps, topRightLabel: s.screen==='interview' ? 'Step 1 of 3' : (s.screen==='plan' ? 'Step 2 of 3' : (s.screen==='prd' ? 'Step 3 of 3' : '')),
+
+      // screen flags
+      isStart: s.screen==='start', isInterview: s.screen==='interview', isPlan: s.screen==='plan', isPrd: s.screen==='prd',
+      onStart: this.start,
+
+      // interview
+      currentQ: q, qNumber: s.qIndex+1, qTotal: this.QUESTIONS.length, qKindLabel: q.kind,
+      isText: q.type==='text', isChoice: q.type==='single'||q.type==='multi', isVisual: q.type==='visual',
+      textValue: s.answers[q.id] || '', onText: this.setText, textRows: q.rows || 3,
+      options, vStyle, onVisual,
+      progressFillStyle: { width: fillPct+'%', height:'100%', background:accent, borderRadius:'99px', transition:'width .3s ease' },
+      onBack: this.back, onNext: this.next,
+      nextLabel: s.qIndex >= this.QUESTIONS.length-1 ? 'Generate plan' : 'Continue',
+
+      // plan
+      plan, annotStyle, annotClass,
+      bulletStyle: { flex:'0 0 auto', width:'7px', height:'7px', borderRadius:'50%', background:accent, marginTop:'7px' },
+      commentMode: s.commentMode,
+      onToggleComment: this.toggleComment,
+      commentBtnLabel: s.commentMode ? 'Done' : 'Comment',
+      commentBtnStyle: { display:'inline-flex', alignItems:'center', gap:'7px', padding:'10px 16px', borderRadius:'10px',
+        cursor:'pointer', font:'inherit', fontSize:'14px', fontWeight:500,
+        border:'1px solid '+(s.commentMode?accent:'#E2E1DC'),
+        background: s.commentMode ? accent+'12' : '#fff', color: s.commentMode ? accent : '#3A3A36' },
+      commentHint: s.commentMode ? 'Click anywhere on the plan to pin a comment.' : 'Add comments, send them to the model to revise the plan, then generate the PRD.',
+      canvasStyle: { flex:'1', minWidth:'0', maxWidth:'720px', background:'#fff', border:'1px solid #ECEBE6',
+        borderRadius:'18px', padding:'40px 44px', position:'relative',
+        '--annot-soft-bg': this.tint(0.08), '--annot-soft-bd': this.tint(0.5),
+        '--annot-active-bg': this.tint(0.16), '--annot-active-bd': accent,
+        cursor: s.commentMode ? 'crosshair' : 'default' },
+      comments, commentCount: comments.length, hasComments: comments.length>0, noComments: comments.length===0,
+      hasPending: !!pending, pendingTarget: pending ? pending.target : '',
+      pendingText: pending ? pending.text : '',
+      pendingStyle: pending ? { position:'absolute', left: Math.min(pending.x, 480)+'px', top:(pending.y+14)+'px',
+        width:'260px', background:'#fff', border:'1px solid #E2E1DC', borderRadius:'12px', padding:'14px',
+        boxShadow:'0 8px 28px rgba(20,20,20,0.14)', zIndex:10 } : {},
+      pendingSubmitStyle: { padding:'7px 13px', borderRadius:'8px', background:accent, color:'#fff', border:'none', cursor:'pointer', fontSize:'13px', fontWeight:500 },
+      onCanvasClick: this.onCanvasClick, onPendingChange: this.onPendingChange,
+      onPendingCancel: this.cancelPending, onPendingSubmit: this.submitPending,
+      stopProp: (e) => e.stopPropagation(),
+      onGeneratePrd: this.generatePrd, onBackToInterview: () => this.setState({ screen:'interview', commentMode:false, pending:null }),
+
+      // send to model
+      onSendToModel: this.sendToModel,
+      sending: s.sending, notSending: !s.sending,
+      sendBtnLabel: s.sending ? 'Revising\u2026' : (pendingCount > 0 ? 'Send to model \u00b7 ' + pendingCount : 'Send to model'),
+      sendDisabled: s.sending || pendingCount === 0,
+      sendBtnStyle: {
+        display:'inline-flex', alignItems:'center', gap:'8px', padding:'10px 16px', borderRadius:'10px',
+        font:'inherit', fontSize:'14px', fontWeight:500,
+        cursor: (s.sending || pendingCount === 0) ? 'default' : 'pointer',
+        border:'1px solid ' + ((s.sending || pendingCount === 0) ? '#E7E6E1' : accent),
+        background: (s.sending || pendingCount === 0) ? '#fff' : accent + '12',
+        color: (s.sending || pendingCount === 0) ? '#B8B8B2' : accent },
+      hasRevision: !!s.revision,
+      revisionSummary: s.revision ? s.revision.summary : '',
+      revisionCountLabel: s.revision ? ('Updated from ' + s.revision.count + (s.revision.count === 1 ? ' comment' : ' comments')) : '',
+      hasRevError: !!s.revisionError, revisionError: s.revisionError || '',
+      onDismissRevision: this.dismissRevision,
+
+      // prd
+      prdProblem: plan.problem ? '' : 'This v1 keeps scope intentionally tight: ship the smallest set of features that proves the core value, instrument the headline metric, and iterate from real usage.',
+      taskGroups, doneCount, totalCount, progressLabel: pct+'%',
+      taskFillStyle: { width: pct+'%', height:'100%', background:accent, borderRadius:'99px', transition:'width .35s ease' },
+      todayLabel: new Date().toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' }),
+      onBackToPlan: () => this.setState({ screen:'plan' }), onRestart: this.restart,
+    };
+  }
+}
+</script>
+</body>
+</html>

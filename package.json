@@ -1,0 +1,43 @@
+{
+  "name": "tenchef",
+  "version": "0.1.0-rc.1",
+  "description": "A local PRD interview studio for AI-assisted product builds.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moeghashim/tenchef.git"
+  },
+  "homepage": "https://github.com/moeghashim/tenchef#readme",
+  "bugs": {
+    "url": "https://github.com/moeghashim/tenchef/issues"
+  },
+  "bin": {
+    "tenchef": "dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "npm run typecheck && npm run build:node && npm run build:web",
+    "build:node": "tsc -p tsconfig.node.json",
+    "build:web": "vite build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "pretest": "npm run build",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "dependencies": {
+    "hono": "^4.6.16",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7",
+    "vitest": "^2.1.8"
+  }
+}
