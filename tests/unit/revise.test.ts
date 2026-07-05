@@ -37,6 +37,6 @@ describe("revise prompt", () => {
   });
 
   it("extracts fenced provider JSON", () => {
-    expect(extractJsonObject("```json\n{\"productName\":\"Pulse\"}\n```")).toEqual({ productName: "Pulse" });
+    expect(extractJsonObject('```json\n{"productName":"Pulse"}\n```')).toEqual({ productName: "Pulse" });
   });
 });

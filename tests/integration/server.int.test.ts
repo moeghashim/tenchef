@@ -63,9 +63,9 @@ describe("server integration", () => {
       expect(listed.find((task) => task.beadsId === coreTask?.beadsId)?.done).toBe(true);
 
       const jsonl = await readFile(path.join(projectDir, ".beads", "beads.jsonl"), "utf8");
-      expect(jsonl).toContain("\"event\":\"dep\"");
-      expect(jsonl).toContain("\"blocked\":\"TEN-4\"");
-      expect(jsonl).toContain("\"blocker\":\"TEN-1\"");
+      expect(jsonl).toContain('"event":"dep"');
+      expect(jsonl).toContain('"blocked":"TEN-4"');
+      expect(jsonl).toContain('"blocker":"TEN-1"');
     } finally {
       await started.close();
     }

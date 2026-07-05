@@ -8,6 +8,7 @@ You are implementing tenchef v1. Two artifacts in this repo are authoritative:
 2. **design/PRD Interview.dc.html** — the visual + interaction reference. Port it faithfully to a real React/TypeScript app. The design uses claude.ai's `<x-dc>` / `<sc-if>` / `<sc-for>` / `{{ ... }}` runtime; rewrite as JSX while preserving every visual choice and interaction.
 
 Hard constraints:
+
 - TypeScript strict, ESM, Node ≥ 20.
 - Stack locked in section 4.1. Do not add a router, a state library, Tailwind, CSS-in-JS, or any schema library beyond what's listed.
 - License: Apache 2.0. Package + bin name: `tenchef`.
@@ -56,19 +57,19 @@ Primary user: **indie dev / solo founder** building with AI coding agents.
 
 ### 4.1 Stack (locked)
 
-| Concern | Choice |
-|---|---|
-| Language | TypeScript strict, ESM, Node ≥ 20 |
-| Web frontend | Vite + React 18 + TypeScript, static build |
-| State | `useReducer` mirroring the design's `this.state` shape. No router. No state-management library. |
-| Styling | Inline styles, ported verbatim from the design. Shared tokens (accent, fonts, spacing constants) extracted to `src/web/styles/tokens.ts`. No Tailwind. No CSS-in-JS runtime. |
-| HTTP server | Hono |
-| LLM SDKs | Browser-side `fetch` against Anthropic / OpenAI messages endpoints. No provider SDKs (avoid bundle bloat). |
-| Task tracker | **beads** (`bd` CLI). Required dependency — preflight check at server start. |
-| Test framework | vitest |
-| Distribution | npm. `bin: { "tenchef": "dist/cli/index.js" }`. |
-| License | Apache 2.0 |
-| Package + bin name | `tenchef` |
+| Concern            | Choice                                                                                                                                                                       |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Language           | TypeScript strict, ESM, Node ≥ 20                                                                                                                                            |
+| Web frontend       | Vite + React 18 + TypeScript, static build                                                                                                                                   |
+| State              | `useReducer` mirroring the design's `this.state` shape. No router. No state-management library.                                                                              |
+| Styling            | Inline styles, ported verbatim from the design. Shared tokens (accent, fonts, spacing constants) extracted to `src/web/styles/tokens.ts`. No Tailwind. No CSS-in-JS runtime. |
+| HTTP server        | Hono                                                                                                                                                                         |
+| LLM SDKs           | Browser-side `fetch` against Anthropic / OpenAI messages endpoints. No provider SDKs (avoid bundle bloat).                                                                   |
+| Task tracker       | **beads** (`bd` CLI). Required dependency — preflight check at server start.                                                                                                 |
+| Test framework     | vitest                                                                                                                                                                       |
+| Distribution       | npm. `bin: { "tenchef": "dist/cli/index.js" }`.                                                                                                                              |
+| License            | Apache 2.0                                                                                                                                                                   |
+| Package + bin name | `tenchef`                                                                                                                                                                    |
 
 ### 4.2 Architecture
 
@@ -127,6 +128,7 @@ Fixed 8-question sequence, exactly as defined in `design/PRD Interview.dc.html` 
 8. `timeline` — single, "Target for v1?" (<1 month / quarter / 6 months / no date)
 
 Rules:
+
 - Auto-advance 220ms after single-select and visual selection (matches design).
 - Multi-select and text require explicit "Continue."
 - Back from question 1 returns to Start.
@@ -145,6 +147,7 @@ Five annotatable sections rendered as a single plan card (each carries `data-ann
 - **Milestones** — Foundation / Core build / Launch as 3 cards
 
 Comment mode:
+
 - Toolbar toggle. When on: cursor → crosshair, click anywhere on the plan to open a comment popover anchored to that section (`data-annot` lookup) and the click coordinates.
 - Pins render at the original coordinates with a numbered marker.
 - Sidebar lists every comment with hover→highlight mapping to the section.
@@ -154,6 +157,7 @@ Comment mode:
 ### 4.5 PRD output (faithful to design)
 
 Document layout:
+
 - Title + date strip + meta strip (For / Platforms / Target)
 - Overview (uses `summary` and a fallback paragraph if no `problem` was given)
 - Goals (bullet list)
@@ -163,6 +167,7 @@ Document layout:
 - Side rail: large progress %, "Back to plan", "Start over"
 
 Tasks are built by `buildTasks(features, metricLabel)` (lifted from design):
+
 - Foundation: "Set up repo, CI & environments", "Authentication & user accounts", "Design system & app shell"
 - Core features: one task per selected feature
 - Launch: "Wire up <metric> analytics", "QA pass & bug bash", "Launch & rollout plan"
@@ -186,6 +191,7 @@ Docs: https://github.com/gastownhall/beads
 Exit code 1.
 
 If `bd` is present:
+
 - On Generate PRD click: if `.beads/` is missing in cwd, run `bd init`. Then `bd create` one issue per task, with `--type task --label tenchef --label <group>` (group = `foundation` / `core` / `launch`). Set Foundation as blocker of Core, Core as blocker of Launch (per-task dependency edges from Foundation → Core, Core → Launch).
 - On checkbox toggle in the PRD view: POST `/bd/close <id>` (or reopen via `bd update <id> --status open`).
 - On reload with existing `.beads/`: hydrate `state.tasks` from `GET /bd/list` so progress persists across sessions.
@@ -228,15 +234,18 @@ Beads-issue IDs are stored alongside each task in the reducer (`task.beadsId`).
 Default framework: **vitest**.
 
 **Unit:**
+
 - `reducer.test.ts` — every state transition (start→interview→plan→prd, back/forward, comment add/delete/resolve, task toggle, revision apply, restart).
 - `revise.test.ts` — the `sendToModel` prompt builder produces the exact prompt structure the design uses (snapshot test against a canned plan + comments).
 - `beads.test.ts` — beads wrapper builds the right `bd` argv strings.
 
 **Integration:**
+
 - `server.int.test.ts` — spawn the Hono server against a temp dir, hit `/bd/init`, `/bd/create`, `/bd/close`, assert against the resulting `.beads/beads.jsonl`.
 - `preflight.int.test.ts` — run `node dist/cli/index.js` with a mocked PATH that omits `bd`; assert exit code 1 + install message on stderr.
 
 **Smoke:**
+
 - `npm run build && node bin/tenchef --no-open --port 7777` boots; `GET /` returns 200; `GET /bd/list` returns `[]` against empty `.beads/`.
 
 ---

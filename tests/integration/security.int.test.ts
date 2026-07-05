@@ -7,13 +7,10 @@ import { startTenchefServer, type StartedServer } from "../../src/server/index";
 
 function rawGet(port: number, urlPath: string, headers: Record<string, string> = {}): Promise<number> {
   return new Promise((resolve, reject) => {
-    const req = request(
-      { hostname: "127.0.0.1", port, path: urlPath, method: "GET", headers },
-      (response) => {
-        response.resume();
-        response.on("end", () => resolve(response.statusCode ?? 0));
-      }
-    );
+    const req = request({ hostname: "127.0.0.1", port, path: urlPath, method: "GET", headers }, (response) => {
+      response.resume();
+      response.on("end", () => resolve(response.statusCode ?? 0));
+    });
     req.on("error", reject);
     req.end();
   });

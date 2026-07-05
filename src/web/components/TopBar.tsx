@@ -49,9 +49,7 @@ export function TopBar({ screen, accent, showStepper = true }: TopBarProps) {
         <span style={{ fontSize: 13, color: colors.soft, fontWeight: 400 }}>PRD studio</span>
       </div>
       {showStepper ? <Stepper screen={screen} accent={accent} /> : <div />}
-      <div style={{ fontSize: 13, color: colors.soft, minWidth: 90, textAlign: "right" }}>
-        {topRightLabel(screen)}
-      </div>
+      <div style={{ fontSize: 13, color: colors.soft, minWidth: 90, textAlign: "right" }}>{topRightLabel(screen)}</div>
     </div>
   );
 }

@@ -22,7 +22,9 @@ export function buildPrdMarkdown(params: {
   lines.push(plan.summary);
   lines.push("");
   if (!plan.problem) {
-    lines.push("This v1 keeps scope intentionally tight: ship the smallest set of features that proves the core value, instrument the headline metric, and iterate from real usage.");
+    lines.push(
+      "This v1 keeps scope intentionally tight: ship the smallest set of features that proves the core value, instrument the headline metric, and iterate from real usage."
+    );
     lines.push("");
   }
   lines.push("## Goals");

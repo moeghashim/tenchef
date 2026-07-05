@@ -132,9 +132,13 @@ export function App() {
         : await (async () => {
             await postJson<{ ok: true }>("/bd/init", {}, token);
             return (
-              await postJson<{ tasks: BuildTask[] }>("/bd/create", {
-                tasks: state.tasks
-              }, token)
+              await postJson<{ tasks: BuildTask[] }>(
+                "/bd/create",
+                {
+                  tasks: state.tasks
+                },
+                token
+              )
             ).tasks;
           })();
       const content = buildPrdMarkdown({

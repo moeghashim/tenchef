@@ -20,7 +20,9 @@ export function buildRevisePrompt(plan: ProductPlan, comments: PlanComment[]): s
     features: plan.features,
     milestones: plan.milestones
   };
-  const commentsText = comments.map((comment, i) => `${i + 1}. [section: ${comment.target}] ${comment.text}`).join("\n");
+  const commentsText = comments
+    .map((comment, i) => `${i + 1}. [section: ${comment.target}] ${comment.text}`)
+    .join("\n");
   return (
     "You are a senior product manager revising a product plan based on reviewer comments.\n\n" +
     "CURRENT PLAN (JSON):\n" +
@@ -40,7 +42,10 @@ export function buildRevisePrompt(plan: ProductPlan, comments: PlanComment[]): s
 
 export function extractJsonObject(text: string): PlanRevision {
   let value = text.trim();
-  value = value.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+  value = value
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/, "")
+    .trim();
   const start = value.indexOf("{");
   const end = value.lastIndexOf("}");
   if (start >= 0 && end > start) value = value.slice(start, end + 1);

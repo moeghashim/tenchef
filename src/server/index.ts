@@ -146,7 +146,12 @@ export async function startTenchefServer(options: StartServerOptions): Promise<S
   };
 }
 
-async function handleRequest(app: Hono, request: IncomingMessage, response: ServerResponse, port: number): Promise<void> {
+async function handleRequest(
+  app: Hono,
+  request: IncomingMessage,
+  response: ServerResponse,
+  port: number
+): Promise<void> {
   try {
     const webRequest = toWebRequest(request, port);
     const webResponse = await app.fetch(webRequest);
