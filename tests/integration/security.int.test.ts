@@ -182,4 +182,16 @@ describe("server security", () => {
     });
     expect(response.status).toBe(400);
   });
+
+  it("rejects /bd/create when a label would be parsed as a bd flag", async () => {
+    if (!started) throw new Error("server not started");
+    const response = await fetch(`${started.url}/bd/create`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-tenchef-token": started.token },
+      body: JSON.stringify({
+        tasks: [{ id: "t0", label: "--rm-rf-my-repo", group: "Core features", done: false }]
+      })
+    });
+    expect(response.status).toBe(400);
+  });
 });
