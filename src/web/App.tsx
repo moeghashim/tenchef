@@ -6,14 +6,13 @@ import { Prd } from "./components/Prd";
 import { Start } from "./components/Start";
 import { TopBar } from "./components/TopBar";
 import { revisePlan } from "./llm/revise";
+import { loadKeySettingsFrom, saveKeySettingsTo } from "./state/keyStorage";
 import { appReducer, createInitialState } from "./state/reducer";
 import { buildPrdMarkdown } from "./state/prd";
-import type { AppState, BuildTask, KeySettings, LlmProvider } from "./state/types";
+import type { AppState, BuildTask, KeySettings } from "./state/types";
 import { DEFAULT_ACCENT, colors } from "./styles/tokens";
 
 const SESSION_KEY = "tenchef.session";
-const API_KEY_KEY = "tenchef.apiKey";
-const PROVIDER_KEY = "tenchef.provider";
 
 interface RuntimeConfig {
   accent?: string;
@@ -21,10 +20,7 @@ interface RuntimeConfig {
 }
 
 function loadKeySettings(): KeySettings | null {
-  const apiKey = window.localStorage.getItem(API_KEY_KEY);
-  const provider = window.localStorage.getItem(PROVIDER_KEY) as LlmProvider | null;
-  if (!apiKey || (provider !== "anthropic" && provider !== "openai")) return null;
-  return { apiKey, provider };
+  return loadKeySettingsFrom(window.localStorage, window.sessionStorage);
 }
 
 function loadSession(): AppState {
@@ -97,8 +93,7 @@ export function App() {
   }, [state]);
 
   const saveKey = (settings: KeySettings) => {
-    window.localStorage.setItem(API_KEY_KEY, settings.apiKey);
-    window.localStorage.setItem(PROVIDER_KEY, settings.provider);
+    saveKeySettingsTo(window.localStorage, window.sessionStorage, settings);
     setKeySettings(settings);
   };
 

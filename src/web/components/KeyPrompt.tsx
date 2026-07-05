@@ -40,7 +40,8 @@ export function KeyPrompt({ accent, onSave }: KeyPromptProps) {
           Connect a model.
         </h1>
         <p style={{ fontSize: 16.5, lineHeight: 1.6, color: "#5B5B57", margin: "0 auto 30px", maxWidth: 450 }}>
-          Your key stays in this browser and is used only for direct plan revisions.
+          Your key stays in this browser session — cleared when you close the tab — and is used only for direct plan
+          revisions.
         </p>
         <div
           style={{
