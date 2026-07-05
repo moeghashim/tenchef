@@ -119,4 +119,67 @@ describe("server security", () => {
     });
     expect(response.status).toBe(200);
   });
+
+  it("rejects /fs/write path traversal attempts", async () => {
+    if (!started) throw new Error("server not started");
+    const response = await fetch(`${started.url}/fs/write`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-tenchef-token": started.token },
+      body: JSON.stringify({ path: "../../etc/passwd", content: "x" })
+    });
+    expect(response.status).toBe(400);
+  });
+
+  it("rejects /fs/write absolute paths", async () => {
+    if (!started) throw new Error("server not started");
+    const response = await fetch(`${started.url}/fs/write`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-tenchef-token": started.token },
+      body: JSON.stringify({ path: "/tmp/pwned.md", content: "x" })
+    });
+    expect(response.status).toBe(400);
+  });
+
+  it("rejects /fs/write for non-allowlisted paths", async () => {
+    if (!started) throw new Error("server not started");
+    const response = await fetch(`${started.url}/fs/write`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-tenchef-token": started.token },
+      body: JSON.stringify({ path: "other.md", content: "x" })
+    });
+    expect(response.status).toBe(400);
+  });
+
+  it("rejects /fs/write with malformed JSON (no stack in body)", async () => {
+    if (!started) throw new Error("server not started");
+    const response = await fetch(`${started.url}/fs/write`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-tenchef-token": started.token },
+      body: "{not-json"
+    });
+    expect(response.status).toBe(400);
+    const text = await response.text();
+    expect(text.toLowerCase()).not.toContain("syntaxerror");
+    expect(text).not.toContain("at ");
+  });
+
+  it("rejects /bd/create with malformed JSON", async () => {
+    if (!started) throw new Error("server not started");
+    const response = await fetch(`${started.url}/bd/create`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-tenchef-token": started.token },
+      body: "not json"
+    });
+    expect(response.status).toBe(400);
+  });
+
+  it("rejects /bd/close with malformed JSON", async () => {
+    if (!started) throw new Error("server not started");
+    const response = await fetch(`${started.url}/bd/close`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-tenchef-token": started.token },
+      body: ""
+    });
+    expect(response.status).toBe(400);
+  });
 });

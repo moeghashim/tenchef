@@ -20,14 +20,24 @@ export function bdRoutes(projectDir: string): Hono {
   });
 
   app.post("/create", async (context) => {
-    const body = (await context.req.json()) as CreateBody;
+    let body: CreateBody;
+    try {
+      body = (await context.req.json()) as CreateBody;
+    } catch {
+      return context.text("Invalid request body.", 400);
+    }
     if (!Array.isArray(body.tasks)) return context.text("Missing tasks.", 400);
     const tasks = await createTasksWithDependencies(projectDir, body.tasks);
     return context.json({ tasks });
   });
 
   app.post("/close", async (context) => {
-    const body = (await context.req.json()) as CloseBody;
+    let body: CloseBody;
+    try {
+      body = (await context.req.json()) as CloseBody;
+    } catch {
+      return context.text("Invalid request body.", 400);
+    }
     if (!body.id) return context.text("Missing id.", 400);
     await setTaskClosed(projectDir, body.id, body.done !== false);
     return context.json({ ok: true });
