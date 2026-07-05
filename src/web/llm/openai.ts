@@ -1,4 +1,10 @@
-export async function callOpenAi(apiKey: string, prompt: string): Promise<string> {
+import { DEFAULT_OPENAI_MODEL } from "./models";
+
+export async function callOpenAi(
+  apiKey: string,
+  prompt: string,
+  model: string = DEFAULT_OPENAI_MODEL
+): Promise<string> {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -6,7 +12,7 @@ export async function callOpenAi(apiKey: string, prompt: string): Promise<string
       authorization: `Bearer ${apiKey}`
     },
     body: JSON.stringify({
-      model: "gpt-4o",
+      model,
       messages: [{ role: "user", content: prompt }]
     })
   });
