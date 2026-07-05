@@ -49,7 +49,14 @@ export function extractJsonObject(text: string): PlanRevision {
   const start = value.indexOf("{");
   const end = value.lastIndexOf("}");
   if (start >= 0 && end > start) value = value.slice(start, end + 1);
-  return JSON.parse(value) as PlanRevision;
+  const parsed = JSON.parse(value) as unknown;
+  // Reject arrays, null, and primitives. Casting an array to PlanRevision
+  // and spreading it into APPLY_REVISION would silently produce a broken
+  // plan whose fields are all `undefined`.
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new SyntaxError("extractJsonObject expected a JSON object");
+  }
+  return parsed as PlanRevision;
 }
 
 export async function revisePlan(params: {
