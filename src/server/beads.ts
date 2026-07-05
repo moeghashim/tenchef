@@ -28,6 +28,8 @@ export interface BdListItem {
   group?: string;
 }
 
+export const MAX_LABEL_LENGTH = 200;
+
 export function groupToLabel(group: TaskGroup): string {
   if (group === "Foundation") return "foundation";
   if (group === "Core features") return "core";
@@ -39,6 +41,17 @@ export function labelToGroup(label: string): TaskGroup | null {
   if (normalized === "foundation") return "Foundation";
   if (normalized === "core" || normalized === "core features") return "Core features";
   if (normalized === "launch") return "Launch";
+  return null;
+}
+
+// Returns an error message if the label should be rejected, or null.
+// Rejects: non-string, empty, leading '-' (bd would parse as a flag), > 200 chars.
+export function validateBuildTaskLabel(label: unknown): string | null {
+  if (typeof label !== "string") return "Task label must be a string.";
+  const trimmed = label.trim();
+  if (!trimmed) return "Task label must not be empty.";
+  if (trimmed.startsWith("-")) return "Task label must not start with '-'.";
+  if (trimmed.length > MAX_LABEL_LENGTH) return `Task label must be at most ${MAX_LABEL_LENGTH} characters.`;
   return null;
 }
 
@@ -132,13 +145,13 @@ export async function listTenchefTasks(cwd: string): Promise<BuildTask[]> {
 export function normalizeList(stdout: string): BuildTask[] {
   const parsed = JSON.parse(stdout || "[]") as unknown;
   const items = Array.isArray(parsed) ? parsed : [];
-  return items.flatMap((item, index) => {
-    const task = normalizeItem(item as BdListItem, index);
+  return items.flatMap((item) => {
+    const task = normalizeItem(item as BdListItem);
     return task ? [task] : [];
   });
 }
 
-function normalizeItem(item: BdListItem, index: number): BuildTask | null {
+function normalizeItem(item: BdListItem): BuildTask | null {
   const labels = Array.isArray(item.labels) ? item.labels : [];
   if (labels.length && !labels.includes("tenchef")) return null;
   const group = item.group ? labelToGroup(item.group) : labels.map(labelToGroup).find(Boolean);
@@ -148,7 +161,10 @@ function normalizeItem(item: BdListItem, index: number): BuildTask | null {
   if (!label || !id) return null;
   const status = (item.status || "").toLowerCase();
   return {
-    id: `bd-${index}`,
+    // Use the stable beadsId as the local id. Synthesizing `bd-${index}`
+    // meant a reorder in `bd list` would silently reshuffle React keys and
+    // task-toggle targets.
+    id,
     label,
     group,
     done: status === "closed" || status === "done" || status === "complete",
@@ -156,7 +172,10 @@ function normalizeItem(item: BdListItem, index: number): BuildTask | null {
   };
 }
 
-function parseCreatedId(stdout: string): string | undefined {
+// Parses the stable id (JSON `{"id": "..."}` or a bare `PREFIX-123`
+// pattern) out of `bd create` stdout. Returns undefined on anything else —
+// no last-resort regex that would grab the first word of an error message.
+export function parseCreatedId(stdout: string): string | undefined {
   const text = stdout.trim();
   if (!text) return undefined;
   try {
@@ -164,7 +183,7 @@ function parseCreatedId(stdout: string): string | undefined {
     const value = parsed.id || parsed.issue?.id;
     return value ? String(value) : undefined;
   } catch {
-    const match = text.match(/[A-Za-z][A-Za-z0-9_-]*-\d+/) || text.match(/[A-Za-z0-9_-]+/);
+    const match = text.match(/[A-Za-z][A-Za-z0-9_-]*-\d+/);
     return match?.[0];
   }
 }
@@ -176,10 +195,10 @@ async function readTasksFromJsonl(cwd: string): Promise<BuildTask[]> {
     return content
       .split("\n")
       .filter(Boolean)
-      .flatMap((line, index) => {
+      .flatMap((line) => {
         try {
           const item = JSON.parse(line) as BdListItem;
-          const task = normalizeItem(item, index);
+          const task = normalizeItem(item);
           return task ? [task] : [];
         } catch {
           return [];

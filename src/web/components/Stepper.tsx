@@ -36,9 +36,7 @@ export function Stepper({ screen, accent }: StepperProps) {
             >
               {labels[step]}
             </div>
-            {index < order.length - 1 ? (
-              <div style={{ width: 14, height: 1, background: "#DAD9D3" }} />
-            ) : null}
+            {index < order.length - 1 ? <div style={{ width: 14, height: 1, background: "#DAD9D3" }} /> : null}
           </div>
         );
       })}
