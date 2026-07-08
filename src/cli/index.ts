@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { openBrowser } from "./open-browser.js";
@@ -23,15 +24,18 @@ async function main(): Promise<void> {
 
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const webDir = path.resolve(__dirname, "../web");
+  const token = randomBytes(16).toString("hex");
   const started = await startTenchefServer({
     projectDir: options.dir,
     webDir,
     accent: options.accent,
+    token,
     port: options.port
   });
 
-  process.stdout.write(`tenchef running at ${started.url}\n`);
-  if (!options.noOpen) openBrowser(started.url);
+  const openUrl = `${started.url}/#token=${token}`;
+  process.stdout.write(`tenchef running at ${openUrl}\n`);
+  if (!options.noOpen) openBrowser(openUrl);
 
   const shutdown = () => {
     started.close().finally(() => process.exit(0));

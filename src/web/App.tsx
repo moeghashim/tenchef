@@ -5,6 +5,9 @@ import { Plan } from "./components/Plan";
 import { Prd } from "./components/Prd";
 import { Start } from "./components/Start";
 import { TopBar } from "./components/TopBar";
+import { apiFetch, bootstrapToken, postJson } from "./api";
+import { DEFAULT_ANTHROPIC_MODEL } from "./llm/anthropic";
+import { DEFAULT_OPENAI_MODEL } from "./llm/openai";
 import { revisePlan } from "./llm/revise";
 import { appReducer, createInitialState } from "./state/reducer";
 import { buildPrdMarkdown } from "./state/prd";
@@ -14,6 +17,7 @@ import { DEFAULT_ACCENT, colors } from "./styles/tokens";
 const SESSION_KEY = "tenchef.session";
 const API_KEY_KEY = "tenchef.apiKey";
 const PROVIDER_KEY = "tenchef.provider";
+const MODEL_KEY = "tenchef.model";
 
 interface RuntimeConfig {
   accent?: string;
@@ -23,7 +27,10 @@ function loadKeySettings(): KeySettings | null {
   const apiKey = window.localStorage.getItem(API_KEY_KEY);
   const provider = window.localStorage.getItem(PROVIDER_KEY) as LlmProvider | null;
   if (!apiKey || (provider !== "anthropic" && provider !== "openai")) return null;
-  return { apiKey, provider };
+  const model =
+    window.localStorage.getItem(MODEL_KEY) ||
+    (provider === "anthropic" ? DEFAULT_ANTHROPIC_MODEL : DEFAULT_OPENAI_MODEL);
+  return { apiKey, provider, model };
 }
 
 function loadSession(): AppState {
@@ -44,18 +51,7 @@ function loadSession(): AppState {
   }
 }
 
-async function postJson<T>(url: string, body: unknown): Promise<T> {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body)
-  });
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || `${url} failed with ${response.status}`);
-  }
-  return (await response.json()) as T;
-}
+bootstrapToken();
 
 export function App() {
   const [state, dispatch] = useReducer(appReducer, undefined, loadSession);
@@ -72,7 +68,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    fetch("/bd/list")
+    apiFetch("/bd/list")
       .then((response) => (response.ok ? response.json() : []))
       .then((tasks: BuildTask[]) => {
         if (Array.isArray(tasks) && tasks.length) dispatch({ type: "HYDRATE_TASKS", tasks });
@@ -93,6 +89,7 @@ export function App() {
   const saveKey = (settings: KeySettings) => {
     window.localStorage.setItem(API_KEY_KEY, settings.apiKey);
     window.localStorage.setItem(PROVIDER_KEY, settings.provider);
+    window.localStorage.setItem(MODEL_KEY, settings.model);
     setKeySettings(settings);
   };
 
@@ -109,6 +106,7 @@ export function App() {
       const revision = await revisePlan({
         provider: keySettings.provider,
         apiKey: keySettings.apiKey,
+        model: keySettings.model,
         plan: state.plan,
         comments: pending
       });

@@ -47,16 +47,85 @@ export function extractJsonObject(text: string): PlanRevision {
   return JSON.parse(value) as PlanRevision;
 }
 
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+export function validateRevision(revision: PlanRevision): string[] {
+  const errors: string[] = [];
+  if (typeof revision.productName !== "string" || !revision.productName.trim()) {
+    errors.push("productName must be a non-empty string");
+  }
+  if (typeof revision.summary !== "string" || !revision.summary.trim()) {
+    errors.push("summary must be a non-empty string");
+  }
+  if (!isStringArray(revision.goals) || !revision.goals.length) {
+    errors.push("goals must be a non-empty array of strings");
+  }
+  if (!isStringArray(revision.platforms) || !revision.platforms.length) {
+    errors.push("platforms must be a non-empty array of strings");
+  }
+  if (!isStringArray(revision.features) || !revision.features.length) {
+    errors.push("features must be a non-empty array of strings");
+  }
+  const milestones = revision.milestones;
+  const milestonesValid =
+    Array.isArray(milestones) &&
+    milestones.length > 0 &&
+    milestones.every((milestone) => {
+      const value = milestone as { phase?: unknown; items?: unknown };
+      return typeof value.phase === "string" && isStringArray(value.items);
+    });
+  if (!milestonesValid) {
+    errors.push("milestones must be a non-empty array of {phase: string, items: string[]} objects");
+  }
+  if (typeof revision.changeSummary !== "string") {
+    errors.push("changeSummary must be a string");
+  }
+  return errors;
+}
+
+export function parseRevisionText(text: string): PlanRevision {
+  let revision: PlanRevision;
+  try {
+    revision = extractJsonObject(text);
+  } catch (error) {
+    throw new Error(`response was not valid JSON: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  const errors = validateRevision(revision);
+  if (errors.length) throw new Error(errors.join("; "));
+  return revision;
+}
+
+export type LlmCaller = (prompt: string) => Promise<string>;
+
+export async function revisePlanWithCaller(
+  call: LlmCaller,
+  plan: ProductPlan,
+  comments: PlanComment[]
+): Promise<PlanRevision> {
+  const prompt = buildRevisePrompt(plan, comments);
+  const text = await call(prompt);
+  try {
+    return parseRevisionText(text);
+  } catch (error) {
+    const feedback =
+      `${prompt}\n\nYour previous response was rejected because ${error instanceof Error ? error.message : String(error)}. ` +
+      "Return ONLY the corrected minified JSON object with exactly the keys described above.";
+    return parseRevisionText(await call(feedback));
+  }
+}
+
 export async function revisePlan(params: {
   provider: LlmProvider;
   apiKey: string;
+  model: string;
   plan: ProductPlan;
   comments: PlanComment[];
 }): Promise<PlanRevision> {
-  const prompt = buildRevisePrompt(params.plan, params.comments);
-  const text =
+  const call: LlmCaller =
     params.provider === "anthropic"
-      ? await callAnthropic(params.apiKey, prompt)
-      : await callOpenAi(params.apiKey, prompt);
-  return extractJsonObject(text);
+      ? (prompt) => callAnthropic(params.apiKey, params.model, prompt)
+      : (prompt) => callOpenAi(params.apiKey, params.model, prompt);
+  return revisePlanWithCaller(call, params.plan, params.comments);
 }

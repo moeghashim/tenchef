@@ -104,6 +104,7 @@ export type LlmProvider = "anthropic" | "openai";
 export interface KeySettings {
   provider: LlmProvider;
   apiKey: string;
+  model: string;
 }
 
 export interface PlanRevision {

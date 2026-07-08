@@ -1,6 +1,41 @@
 import { describe, expect, it } from "vitest";
-import { buildRevisePrompt, extractJsonObject } from "../../src/web/llm/revise";
+import {
+  buildRevisePrompt,
+  extractJsonObject,
+  revisePlanWithCaller,
+  validateRevision
+} from "../../src/web/llm/revise";
 import type { PlanComment, ProductPlan } from "../../src/web/state/types";
+
+const VALID_REVISION = {
+  productName: "Pulse",
+  summary: "Pulse helps teams keep context.",
+  goals: ["Goal one", "Goal two", "Goal three"],
+  platforms: ["Web"],
+  features: ["Accounts & auth"],
+  milestones: [{ phase: "Foundation", items: ["Scaffold"] }],
+  changeSummary: "Tightened the summary."
+};
+
+const TEST_PLAN: ProductPlan = {
+  productName: "Pulse",
+  summary: "Pulse helps teams keep context.",
+  audienceLabel: "Businesses",
+  audienceDesc: "Teams & companies",
+  metricLabel: "Activation",
+  timelineLabel: "This quarter",
+  directionLabel: "Minimal",
+  platforms: ["Web"],
+  platformsLabel: "Web",
+  features: ["Accounts & auth"],
+  goals: ["Goal one", "Goal two", "Goal three"],
+  milestones: [{ phase: "Foundation", items: ["Scaffold"] }],
+  problem: "Teams lose context."
+};
+
+const TEST_COMMENTS: PlanComment[] = [
+  { num: 1, x: 10, y: 20, target: "Header", text: "Make it more concrete.", resolved: false }
+];
 
 describe("revise prompt", () => {
   it("matches the design prompt structure", () => {
@@ -38,5 +73,47 @@ describe("revise prompt", () => {
 
   it("extracts fenced provider JSON", () => {
     expect(extractJsonObject("```json\n{\"productName\":\"Pulse\"}\n```")).toEqual({ productName: "Pulse" });
+  });
+});
+
+describe("revision validation", () => {
+  it("accepts a complete revision", () => {
+    expect(validateRevision(VALID_REVISION)).toEqual([]);
+  });
+
+  it("reports every malformed field", () => {
+    const errors = validateRevision({
+      productName: 42,
+      summary: "",
+      goals: "not an array",
+      platforms: [],
+      features: [null],
+      milestones: [{ phase: "Foundation" }],
+      changeSummary: undefined
+    });
+    expect(errors).toHaveLength(7);
+  });
+
+  it("retries once with the validation error, then applies the corrected response", async () => {
+    const prompts: string[] = [];
+    const responses = ["{\"productName\": 42}", JSON.stringify(VALID_REVISION)];
+    const revision = await revisePlanWithCaller(
+      async (prompt) => {
+        prompts.push(prompt);
+        return responses[prompts.length - 1];
+      },
+      TEST_PLAN,
+      TEST_COMMENTS
+    );
+    expect(revision).toEqual(VALID_REVISION);
+    expect(prompts).toHaveLength(2);
+    expect(prompts[1]).toContain("Your previous response was rejected because");
+    expect(prompts[1]).toContain("summary must be a non-empty string");
+  });
+
+  it("throws when the retry is also invalid", async () => {
+    await expect(
+      revisePlanWithCaller(async () => "not json at all", TEST_PLAN, TEST_COMMENTS)
+    ).rejects.toThrow();
   });
 });

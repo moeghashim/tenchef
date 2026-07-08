@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { DEFAULT_ANTHROPIC_MODEL, validateAnthropicKey } from "../llm/anthropic";
+import { DEFAULT_OPENAI_MODEL, validateOpenAiKey } from "../llm/openai";
 import type { KeySettings, LlmProvider } from "../state/types";
 import { ACCENT_OPTIONS, colors, fonts } from "../styles/tokens";
 
@@ -7,11 +9,54 @@ interface KeyPromptProps {
   onSave: (settings: KeySettings) => void;
 }
 
+function defaultModelFor(provider: LlmProvider): string {
+  return provider === "anthropic" ? DEFAULT_ANTHROPIC_MODEL : DEFAULT_OPENAI_MODEL;
+}
+
 export function KeyPrompt({ accent, onSave }: KeyPromptProps) {
   const [provider, setProvider] = useState<LlmProvider>("anthropic");
   const [apiKey, setApiKey] = useState("");
+  const [model, setModel] = useState(DEFAULT_ANTHROPIC_MODEL);
+  const [modelEdited, setModelEdited] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const canSave = apiKey.trim().length > 0;
+  const canSave = apiKey.trim().length > 0 && model.trim().length > 0 && !checking;
+
+  const selectProvider = (value: LlmProvider) => {
+    setProvider(value);
+    setError(null);
+    if (!modelEdited) setModel(defaultModelFor(value));
+  };
+
+  const save = async () => {
+    if (!canSave) return;
+    setChecking(true);
+    setError(null);
+    const trimmedKey = apiKey.trim();
+    const trimmedModel = model.trim();
+    const problem =
+      provider === "anthropic"
+        ? await validateAnthropicKey(trimmedKey, trimmedModel)
+        : await validateOpenAiKey(trimmedKey, trimmedModel);
+    setChecking(false);
+    if (problem) {
+      setError(problem);
+      return;
+    }
+    onSave({ provider, apiKey: trimmedKey, model: trimmedModel });
+  };
+
+  const inputStyle = {
+    width: "100%",
+    border: `1px solid ${colors.lineStrong}`,
+    borderRadius: 12,
+    padding: "14px 16px",
+    fontSize: 15.5,
+    color: colors.ink,
+    background: colors.white,
+    outline: "none"
+  } as const;
 
   return (
     <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 24px" }}>
@@ -57,7 +102,7 @@ export function KeyPrompt({ accent, onSave }: KeyPromptProps) {
               return (
                 <button
                   key={value}
-                  onClick={() => setProvider(value)}
+                  onClick={() => selectProvider(value)}
                   style={{
                     padding: "11px 14px",
                     borderRadius: 10,
@@ -77,26 +122,38 @@ export function KeyPrompt({ accent, onSave }: KeyPromptProps) {
           <input
             className="tc-input"
             value={apiKey}
-            onChange={(event) => setApiKey(event.target.value)}
+            onChange={(event) => {
+              setApiKey(event.target.value);
+              setError(null);
+            }}
             placeholder={provider === "anthropic" ? "sk-ant-..." : "sk-..."}
             type="password"
-            style={{
-              width: "100%",
-              border: `1px solid ${colors.lineStrong}`,
-              borderRadius: 12,
-              padding: "14px 16px",
-              fontSize: 15.5,
-              color: colors.ink,
-              background: colors.white,
-              outline: "none"
-            }}
+            style={inputStyle}
           />
+          <input
+            className="tc-input"
+            value={model}
+            onChange={(event) => {
+              setModel(event.target.value);
+              setModelEdited(true);
+              setError(null);
+            }}
+            placeholder={defaultModelFor(provider)}
+            type="text"
+            aria-label="Model"
+            style={{ ...inputStyle, marginTop: 10 }}
+          />
+          <div style={{ fontSize: 12.5, color: colors.soft, marginTop: 8 }}>
+            Model used for plan revisions. The default is a current general-availability model.
+          </div>
+          {error ? (
+            <div style={{ fontSize: 13.5, color: "#B4372E", marginTop: 10, lineHeight: 1.5 }}>{error}</div>
+          ) : null}
           <button
             className="tc-dark-button"
             disabled={!canSave}
             onClick={() => {
-              if (!canSave) return;
-              onSave({ provider, apiKey: apiKey.trim() });
+              void save();
             }}
             style={{
               marginTop: 14,
@@ -111,7 +168,7 @@ export function KeyPrompt({ accent, onSave }: KeyPromptProps) {
               fontWeight: 500
             }}
           >
-            Save key
+            {checking ? "Checking key…" : "Save key"}
           </button>
         </div>
         <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 16 }}>

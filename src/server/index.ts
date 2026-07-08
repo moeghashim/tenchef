@@ -11,6 +11,7 @@ export interface TenchefAppOptions {
   projectDir: string;
   webDir: string;
   accent: string;
+  token: string;
   onRequest?: () => void;
 }
 
@@ -38,11 +39,20 @@ const CONTENT_TYPES: Record<string, string> = {
   ".woff2": "font/woff2"
 };
 
+const PROTECTED_PREFIXES = ["/fs", "/bd", "/state", "/llm"];
+
 export function createTenchefApp(options: TenchefAppOptions): Hono {
   const app = new Hono();
 
-  app.use("*", async (_context, next) => {
+  app.use("*", async (context, next) => {
     options.onRequest?.();
+    if (PROTECTED_PREFIXES.some((prefix) => context.req.path.startsWith(prefix))) {
+      const origin = context.req.header("origin");
+      if (origin && !isLocalOrigin(origin)) return context.text("Forbidden origin.", 403);
+      if (context.req.header("x-tenchef-token") !== options.token) {
+        return context.text("Missing or invalid tenchef token. Reopen the URL printed in your terminal.", 401);
+      }
+    }
     await next();
   });
 
@@ -129,6 +139,15 @@ function toWebRequest(request: IncomingMessage, port: number): Request {
     init.duplex = "half";
   }
   return new Request(url, init);
+}
+
+function isLocalOrigin(origin: string): boolean {
+  try {
+    const { hostname } = new URL(origin);
+    return hostname === "127.0.0.1" || hostname === "localhost" || hostname === "[::1]";
+  } catch {
+    return false;
+  }
 }
 
 async function serveStatic(requestPath: string, webDir: string): Promise<Response> {

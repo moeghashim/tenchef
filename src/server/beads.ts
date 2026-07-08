@@ -51,7 +51,10 @@ export function buildDependencyArgs(blockedId: string, blockerId: string): strin
 }
 
 export function buildCloseArgs(id: string): string[] {
-  return ["close", id];
+  // --force: tenchef's own Foundation → Core → Launch blockers would otherwise
+  // reject closing a task before its blockers; a checkbox tick is an explicit
+  // user decision, so it wins over dependency order.
+  return ["close", id, "--force"];
 }
 
 export function buildReopenArgs(id: string): string[] {
@@ -119,13 +122,24 @@ export async function setTaskClosed(cwd: string, id: string, done: boolean): Pro
   await runBd(done ? buildCloseArgs(id) : buildReopenArgs(id), cwd);
 }
 
+export function buildListArgs(): string[] {
+  // --all: closed issues drop out of the default listing, which would reset
+  // checked-off tasks on reload. --limit 0 lifts the default 50-issue cap.
+  return ["list", "--json", "--all", "--label", "tenchef", "--limit", "0"];
+}
+
 export async function listTenchefTasks(cwd: string): Promise<BuildTask[]> {
   if (!existsSync(path.join(cwd, ".beads"))) return [];
   try {
-    const result = await runBd(["list", "--json"], cwd);
+    const result = await runBd(buildListArgs(), cwd);
     return normalizeList(result.stdout);
   } catch {
-    return readTasksFromJsonl(cwd);
+    try {
+      const result = await runBd(["list", "--json"], cwd);
+      return normalizeList(result.stdout);
+    } catch {
+      return readTasksFromJsonl(cwd);
+    }
   }
 }
 
@@ -156,7 +170,7 @@ function normalizeItem(item: BdListItem, index: number): BuildTask | null {
   };
 }
 
-function parseCreatedId(stdout: string): string | undefined {
+export function parseCreatedId(stdout: string): string | undefined {
   const text = stdout.trim();
   if (!text) return undefined;
   try {
@@ -164,7 +178,11 @@ function parseCreatedId(stdout: string): string | undefined {
     const value = parsed.id || parsed.issue?.id;
     return value ? String(value) : undefined;
   } catch {
-    const match = text.match(/[A-Za-z][A-Za-z0-9_-]*-\d+/) || text.match(/[A-Za-z0-9_-]+/);
+    // bd >= 1.0 prints "✓ Created issue: <prefix>-<suffix> — <title>"; older
+    // builds print the bare ID. Suffixes are not always numeric (e.g. "d8k").
+    const created = text.match(/Created issue:\s*(\S+)/i);
+    if (created) return created[1];
+    const match = text.match(/[A-Za-z][A-Za-z0-9_]*-[A-Za-z0-9]+/);
     return match?.[0];
   }
 }

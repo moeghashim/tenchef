@@ -6,7 +6,7 @@ A local PRD interview studio for AI-assisted product builds. Answer eight visual
 
 ## Status
 
-**v0.1.0-rc.1** — built. Typecheck, unit, and integration tests pass. End-to-end runtime smoke test against a real `bd` install is not yet fully confirmed; treat this release as a preview.
+**v0.1.0** — typecheck, unit, and integration tests pass, including an end-to-end smoke test that boots the built CLI and drives the full init → create → close → list flow against a real `bd` install (verified with bd 1.0.5).
 
 ## What it does
 
@@ -25,7 +25,7 @@ Outputs to your project directory: `PRD.md`, `.beads/beads.jsonl`.
   npm i -g @beads/bd
   pipx install beads-mcp
   ```
-- An **Anthropic** or **OpenAI** API key — pasted into the browser at first launch and stored only in `localStorage`. Never sent to any tenchef-controlled server.
+- An **Anthropic** or **OpenAI** API key — pasted into the browser at first launch and stored only in `localStorage`. Never sent to any tenchef-controlled server. The model is configurable on the same screen (defaults to a current GA model per provider) and the key is validated with a cheap ping before it's saved.
 
 ## Install & run
 
@@ -37,7 +37,7 @@ npx tenchef [directory]
 - `--port <n>` — pin the local server port
 - `--no-open` — skip auto-open (useful for CI or headless environments)
 
-Opens a browser to `http://127.0.0.1:<port>`. The server auto-shuts down after 30 minutes idle.
+Opens a browser to `http://127.0.0.1:<port>/#token=…`. The token authenticates this browser tab to the local API — requests without it (for example from another website you have open) are rejected, so nothing else can write files into your project while tenchef runs. If a tab loses authorization, reopen the URL printed in the terminal. The server auto-shuts down after 30 minutes idle.
 
 ## Design
 
