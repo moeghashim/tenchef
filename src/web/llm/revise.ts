@@ -1,3 +1,4 @@
+import { postJson } from "../api";
 import type { LlmProvider, PlanComment, PlanRevision, ProductPlan } from "../state/types";
 import { callAnthropic } from "./anthropic";
 import { callOpenAi } from "./openai";
@@ -126,6 +127,11 @@ export async function revisePlan(params: {
   const call: LlmCaller =
     params.provider === "anthropic"
       ? (prompt) => callAnthropic(params.apiKey, params.model, prompt)
-      : (prompt) => callOpenAi(params.apiKey, params.model, prompt);
+      : params.provider === "openai"
+        ? (prompt) => callOpenAi(params.apiKey, params.model, prompt)
+        : (prompt) =>
+            postJson<{ text: string }>("/llm/claude", { prompt, model: params.model || undefined }).then(
+              (result) => result.text
+            );
   return revisePlanWithCaller(call, params.plan, params.comments);
 }

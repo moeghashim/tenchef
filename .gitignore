@@ -23,3 +23,6 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# tenchef session state (when running tenchef inside this repo)
+.tenchef/

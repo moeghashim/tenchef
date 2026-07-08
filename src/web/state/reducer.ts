@@ -35,6 +35,7 @@ export type AppAction =
   | { type: "SET_TASKS"; tasks: BuildTask[] }
   | { type: "HYDRATE_TASKS"; tasks: BuildTask[] }
   | { type: "TOGGLE_TASK_LOCAL"; id: string }
+  | { type: "RESTORE"; snapshot: Partial<AppState> }
   | { type: "RESTART" };
 
 export const initialAnswers: Answers = {
@@ -293,6 +294,14 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         tasks: state.tasks.map((task) => (task.id === action.id ? { ...task, done: !task.done } : task))
+      };
+    case "RESTORE":
+      return {
+        ...createInitialState(),
+        ...action.snapshot,
+        sending: false,
+        pending: null,
+        revisionError: null
       };
     case "RESTART":
       return createInitialState();

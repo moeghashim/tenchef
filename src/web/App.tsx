@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { Interview } from "./components/Interview";
 import { KeyPrompt } from "./components/KeyPrompt";
 import { Plan } from "./components/Plan";
@@ -21,16 +21,23 @@ const MODEL_KEY = "tenchef.model";
 
 interface RuntimeConfig {
   accent?: string;
+  claudeCli?: boolean;
 }
 
 function loadKeySettings(): KeySettings | null {
-  const apiKey = window.localStorage.getItem(API_KEY_KEY);
+  const apiKey = window.localStorage.getItem(API_KEY_KEY) || "";
   const provider = window.localStorage.getItem(PROVIDER_KEY) as LlmProvider | null;
-  if (!apiKey || (provider !== "anthropic" && provider !== "openai")) return null;
+  if (provider !== "anthropic" && provider !== "openai" && provider !== "claude-code") return null;
+  if (provider !== "claude-code" && !apiKey) return null;
+  const storedModel = window.localStorage.getItem(MODEL_KEY);
   const model =
-    window.localStorage.getItem(MODEL_KEY) ||
-    (provider === "anthropic" ? DEFAULT_ANTHROPIC_MODEL : DEFAULT_OPENAI_MODEL);
+    storedModel ??
+    (provider === "anthropic" ? DEFAULT_ANTHROPIC_MODEL : provider === "openai" ? DEFAULT_OPENAI_MODEL : "");
   return { apiKey, provider, model };
+}
+
+function sanitizeSnapshot(state: AppState): AppState {
+  return { ...state, sending: false, pending: null, revisionError: null };
 }
 
 function loadSession(): AppState {
@@ -56,15 +63,39 @@ bootstrapToken();
 export function App() {
   const [state, dispatch] = useReducer(appReducer, undefined, loadSession);
   const [accent, setAccent] = useState(DEFAULT_ACCENT);
+  const [claudeCli, setClaudeCli] = useState(false);
   const [keySettings, setKeySettings] = useState<KeySettings | null>(() => loadKeySettings());
+  const restoredRef = useRef(false);
 
   useEffect(() => {
     fetch("/config")
       .then((response) => (response.ok ? response.json() : {}))
       .then((config: RuntimeConfig) => {
         if (config.accent) setAccent(config.accent);
+        setClaudeCli(Boolean(config.claudeCli));
       })
       .catch(() => undefined);
+  }, []);
+
+  // Resume: a same-tab reload restores from sessionStorage; a fresh tab pulls
+  // the last snapshot from .tenchef/state.json in the project directory.
+  useEffect(() => {
+    const hasSession = window.sessionStorage.getItem(SESSION_KEY) !== null;
+    if (hasSession) {
+      restoredRef.current = true;
+      return;
+    }
+    apiFetch("/state")
+      .then((response) => (response.ok ? response.json() : { state: null }))
+      .then((payload: { state: Partial<AppState> | null }) => {
+        if (payload.state && typeof payload.state === "object") {
+          dispatch({ type: "RESTORE", snapshot: payload.state });
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        restoredRef.current = true;
+      });
   }, []);
 
   useEffect(() => {
@@ -76,14 +107,33 @@ export function App() {
       .catch(() => undefined);
   }, []);
 
+  // Live sync: while the PRD checklist is on screen, poll beads so tasks the
+  // coding agent closes via `bd close` tick themselves off here.
   useEffect(() => {
-    const snapshot: AppState = {
-      ...state,
-      sending: false,
-      pending: null,
-      revisionError: null
+    if (state.screen !== "prd") return;
+    let cancelled = false;
+    const interval = setInterval(() => {
+      apiFetch("/bd/list")
+        .then((response) => (response.ok ? response.json() : []))
+        .then((tasks: BuildTask[]) => {
+          if (!cancelled && Array.isArray(tasks) && tasks.length) dispatch({ type: "HYDRATE_TASKS", tasks });
+        })
+        .catch(() => undefined);
+    }, 4000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
     };
+  }, [state.screen]);
+
+  useEffect(() => {
+    const snapshot = sanitizeSnapshot(state);
     window.sessionStorage.setItem(SESSION_KEY, JSON.stringify(snapshot));
+    if (!restoredRef.current) return;
+    const timer = setTimeout(() => {
+      postJson("/state", snapshot).catch(() => undefined);
+    }, 500);
+    return () => clearTimeout(timer);
   }, [state]);
 
   const saveKey = (settings: KeySettings) => {
@@ -111,8 +161,12 @@ export function App() {
         comments: pending
       });
       dispatch({ type: "APPLY_REVISION", revision, sentCount: pending.length });
-    } catch {
-      dispatch({ type: "REVISION_ERROR", message: "Could not revise the plan from your comments. Please try again." });
+    } catch (error) {
+      const detail = error instanceof Error && error.message ? ` (${error.message})` : "";
+      dispatch({
+        type: "REVISION_ERROR",
+        message: `Could not revise the plan from your comments. Please try again.${detail}`
+      });
     }
   };
 
@@ -158,7 +212,7 @@ export function App() {
   };
 
   const body = !keySettings ? (
-    <KeyPrompt accent={accent} onSave={saveKey} />
+    <KeyPrompt accent={accent} claudeCliAvailable={claudeCli} onSave={saveKey} />
   ) : state.screen === "start" ? (
     <Start onStart={() => dispatch({ type: "START" })} />
   ) : state.screen === "interview" ? (

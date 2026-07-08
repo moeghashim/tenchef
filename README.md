@@ -6,7 +6,7 @@ A local PRD interview studio for AI-assisted product builds. Answer eight visual
 
 ## Status
 
-**v0.1.0** — typecheck, unit, and integration tests pass, including an end-to-end smoke test that boots the built CLI and drives the full init → create → close → list flow against a real `bd` install (verified with bd 1.0.5).
+**v0.2.0** — typecheck, unit, and integration tests pass, including an end-to-end smoke test that boots the built CLI and drives the full init → create → close → list flow against a real `bd` install (verified with bd 1.0.5).
 
 ## What it does
 
@@ -14,7 +14,9 @@ A local PRD interview studio for AI-assisted product builds. Answer eight visual
 2. **Plan** — your answers become an annotatable product plan. Toggle comment mode and click any section to pin feedback. "Send to model" revises the plan against your comments. Iterate as many rounds as you want.
 3. **PRD** — generates a rendered document with a grouped build checklist (Foundation / Core features / Launch). Tasks land in [beads](https://github.com/gastownhall/beads) so your coding agent picks them up via `bd ready` and check-marks flow back to `.beads/beads.jsonl`.
 
-Outputs to your project directory: `PRD.md`, `.beads/beads.jsonl`.
+Outputs to your project directory: `PRD.md`, `.beads/beads.jsonl`, and `.tenchef/state.json` (session state — add `.tenchef/` to your project's `.gitignore` if you don't want it tracked).
+
+While the PRD is on screen, tenchef polls beads every few seconds — when your coding agent runs `bd close` on a task, the checklist ticks itself off and the progress bar moves without a reload. Sessions also resume: close the tab (or the whole tool) and the next launch picks up exactly where you left off, restored from `.tenchef/state.json`.
 
 ## Prerequisites
 
@@ -25,7 +27,9 @@ Outputs to your project directory: `PRD.md`, `.beads/beads.jsonl`.
   npm i -g @beads/bd
   pipx install beads-mcp
   ```
-- An **Anthropic** or **OpenAI** API key — pasted into the browser at first launch and stored only in `localStorage`. Never sent to any tenchef-controlled server. The model is configurable on the same screen (defaults to a current GA model per provider) and the key is validated with a cheap ping before it's saved.
+- A model for plan revisions, one of:
+  - **Claude Code** — if the `claude` CLI is installed and logged in, pick "Claude Code" at first launch. No API key needed; revisions run through your local CLI.
+  - An **Anthropic** or **OpenAI** API key — pasted into the browser at first launch and stored only in `localStorage`. Never sent to any tenchef-controlled server. The model is configurable on the same screen (defaults to a current GA model per provider) and the key is validated with a cheap ping before it's saved.
 
 ## Install & run
 

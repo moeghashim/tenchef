@@ -99,7 +99,7 @@ export interface AppState {
   revisionError: string | null;
 }
 
-export type LlmProvider = "anthropic" | "openai";
+export type LlmProvider = "anthropic" | "openai" | "claude-code";
 
 export interface KeySettings {
   provider: LlmProvider;

@@ -6,6 +6,8 @@ import { Readable } from "node:stream";
 import { Hono } from "hono";
 import { bdRoutes } from "./routes/bd.js";
 import { fsRoutes } from "./routes/fs.js";
+import { hasClaudeCli, llmRoutes } from "./routes/llm.js";
+import { stateRoutes } from "./routes/state.js";
 
 export interface TenchefAppOptions {
   projectDir: string;
@@ -56,9 +58,13 @@ export function createTenchefApp(options: TenchefAppOptions): Hono {
     await next();
   });
 
-  app.get("/config", (context) => context.json({ accent: options.accent }));
+  app.get("/config", async (context) =>
+    context.json({ accent: options.accent, claudeCli: await hasClaudeCli() })
+  );
   app.route("/fs", fsRoutes(options.projectDir));
   app.route("/bd", bdRoutes(options.projectDir));
+  app.route("/state", stateRoutes(options.projectDir));
+  app.route("/llm", llmRoutes());
 
   app.get("*", async (context) => serveStatic(context.req.path, options.webDir));
 

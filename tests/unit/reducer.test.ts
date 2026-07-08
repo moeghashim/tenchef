@@ -112,4 +112,19 @@ describe("appReducer", () => {
     state = appReducer(state, { type: "RESTART" });
     expect(state).toEqual(createInitialState());
   });
+
+  it("restores a persisted snapshot and clears transient fields", () => {
+    const snapshot = {
+      screen: "prd" as const,
+      tasks: buildTasks(["Search"], "Activation"),
+      sending: true,
+      revisionError: "stale error"
+    };
+    const state = appReducer(createInitialState(), { type: "RESTORE", snapshot });
+    expect(state.screen).toBe("prd");
+    expect(state.tasks).toHaveLength(snapshot.tasks.length);
+    expect(state.sending).toBe(false);
+    expect(state.pending).toBeNull();
+    expect(state.revisionError).toBeNull();
+  });
 });

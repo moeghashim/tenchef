@@ -4,6 +4,7 @@ import { beforeEach, afterEach, describe, expect, it } from "vitest";
 import { startTenchefServer } from "../../src/server/index";
 import { buildTasks } from "../../src/web/state/reducer";
 import { makeFakeBd, makeTempDir } from "../helpers/fake-bd";
+import { makeFakeClaude } from "../helpers/fake-claude";
 
 const TOKEN = "test-token-1234";
 
@@ -126,6 +127,100 @@ describe("server integration", () => {
 
       const staticPage = await fetch(started.url);
       expect(staticPage.status).toBe(200);
+    } finally {
+      await started.close();
+    }
+  });
+
+  it("persists and returns session state snapshots", async () => {
+    const projectDir = await makeTempDir("tenchef-project-");
+    const webDir = await makeTempDir("tenchef-web-");
+    await writeFile(path.join(webDir, "index.html"), "<html>ok</html>");
+
+    const started = await startTenchefServer({
+      projectDir,
+      webDir,
+      accent: "#2F4FE0",
+      token: TOKEN,
+      idleMs: 0
+    });
+    try {
+      const empty = await fetch(`${started.url}/state`, authed());
+      expect(empty.status).toBe(200);
+      expect(await empty.json()).toEqual({ state: null });
+
+      const snapshot = { screen: "prd", tasks: [{ id: "t0", label: "Search", group: "Core features", done: true }] };
+      const save = await fetch(
+        `${started.url}/state`,
+        authed({
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(snapshot)
+        })
+      );
+      expect(save.status).toBe(200);
+
+      const restored = await fetch(`${started.url}/state`, authed());
+      expect(await restored.json()).toEqual({ state: snapshot });
+
+      const onDisk = await readFile(path.join(projectDir, ".tenchef", "state.json"), "utf8");
+      expect(JSON.parse(onDisk)).toEqual(snapshot);
+
+      const unauthorized = await fetch(`${started.url}/state`);
+      expect(unauthorized.status).toBe(401);
+    } finally {
+      await started.close();
+    }
+  });
+
+  it("advertises the Claude CLI and proxies /llm/claude to it", async () => {
+    const projectDir = await makeTempDir("tenchef-project-");
+    const webDir = await makeTempDir("tenchef-web-");
+    await writeFile(path.join(webDir, "index.html"), "<html>ok</html>");
+    const fakeClaudeBin = await makeFakeClaude();
+    process.env.PATH = `${fakeClaudeBin}${path.delimiter}${oldPath || ""}`;
+
+    const started = await startTenchefServer({
+      projectDir,
+      webDir,
+      accent: "#2F4FE0",
+      token: TOKEN,
+      idleMs: 0
+    });
+    try {
+      const config = await fetch(`${started.url}/config`);
+      expect(((await config.json()) as { claudeCli?: boolean }).claudeCli).toBe(true);
+
+      const revise = await fetch(
+        `${started.url}/llm/claude`,
+        authed({
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ prompt: "Revise this plan." })
+        })
+      );
+      expect(revise.status).toBe(200);
+      const payload = (await revise.json()) as { text: string };
+      const revision = JSON.parse(payload.text) as { productName: string; changeSummary: string };
+      expect(revision.productName).toBe("Pulse");
+      expect(revision.changeSummary).toBe("Fake change.");
+
+      const missingPrompt = await fetch(
+        `${started.url}/llm/claude`,
+        authed({
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({})
+        })
+      );
+      expect(missingPrompt.status).toBe(400);
+
+      const unauthorized = await fetch(`${started.url}/llm/claude`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ prompt: "attack" })
+      });
+      expect(unauthorized.status).toBe(401);
     } finally {
       await started.close();
     }

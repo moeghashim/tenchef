@@ -6,14 +6,23 @@ import { ACCENT_OPTIONS, colors, fonts } from "../styles/tokens";
 
 interface KeyPromptProps {
   accent: string;
+  claudeCliAvailable: boolean;
   onSave: (settings: KeySettings) => void;
 }
 
+const PROVIDER_LABELS: Record<LlmProvider, string> = {
+  anthropic: "Anthropic",
+  openai: "OpenAI",
+  "claude-code": "Claude Code"
+};
+
 function defaultModelFor(provider: LlmProvider): string {
-  return provider === "anthropic" ? DEFAULT_ANTHROPIC_MODEL : DEFAULT_OPENAI_MODEL;
+  if (provider === "anthropic") return DEFAULT_ANTHROPIC_MODEL;
+  if (provider === "openai") return DEFAULT_OPENAI_MODEL;
+  return "";
 }
 
-export function KeyPrompt({ accent, onSave }: KeyPromptProps) {
+export function KeyPrompt({ accent, claudeCliAvailable, onSave }: KeyPromptProps) {
   const [provider, setProvider] = useState<LlmProvider>("anthropic");
   const [apiKey, setApiKey] = useState("");
   const [model, setModel] = useState(DEFAULT_ANTHROPIC_MODEL);
@@ -21,7 +30,10 @@ export function KeyPrompt({ accent, onSave }: KeyPromptProps) {
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canSave = apiKey.trim().length > 0 && model.trim().length > 0 && !checking;
+  const isClaudeCode = provider === "claude-code";
+  const canSave = isClaudeCode
+    ? claudeCliAvailable && !checking
+    : apiKey.trim().length > 0 && model.trim().length > 0 && !checking;
 
   const selectProvider = (value: LlmProvider) => {
     setProvider(value);
@@ -31,10 +43,14 @@ export function KeyPrompt({ accent, onSave }: KeyPromptProps) {
 
   const save = async () => {
     if (!canSave) return;
-    setChecking(true);
-    setError(null);
     const trimmedKey = apiKey.trim();
     const trimmedModel = model.trim();
+    if (isClaudeCode) {
+      onSave({ provider, apiKey: "", model: trimmedModel });
+      return;
+    }
+    setChecking(true);
+    setError(null);
     const problem =
       provider === "anthropic"
         ? await validateAnthropicKey(trimmedKey, trimmedModel)
@@ -96,40 +112,42 @@ export function KeyPrompt({ accent, onSave }: KeyPromptProps) {
             textAlign: "left"
           }}
         >
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
-            {(["anthropic", "openai"] as const).map((value) => {
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
+            {(["anthropic", "openai", "claude-code"] as const).map((value) => {
               const selected = value === provider;
               return (
                 <button
                   key={value}
                   onClick={() => selectProvider(value)}
                   style={{
-                    padding: "11px 14px",
+                    padding: "11px 10px",
                     borderRadius: 10,
                     border: `1px solid ${selected ? accent : colors.lineStrong}`,
                     background: selected ? `${accent}12` : colors.white,
                     color: selected ? accent : colors.text,
                     cursor: "pointer",
-                    fontSize: 14.5,
+                    fontSize: 14,
                     fontWeight: 500
                   }}
                 >
-                  {value === "anthropic" ? "Anthropic" : "OpenAI"}
+                  {PROVIDER_LABELS[value]}
                 </button>
               );
             })}
           </div>
-          <input
-            className="tc-input"
-            value={apiKey}
-            onChange={(event) => {
-              setApiKey(event.target.value);
-              setError(null);
-            }}
-            placeholder={provider === "anthropic" ? "sk-ant-..." : "sk-..."}
-            type="password"
-            style={inputStyle}
-          />
+          {isClaudeCode ? null : (
+            <input
+              className="tc-input"
+              value={apiKey}
+              onChange={(event) => {
+                setApiKey(event.target.value);
+                setError(null);
+              }}
+              placeholder={provider === "anthropic" ? "sk-ant-..." : "sk-..."}
+              type="password"
+              style={inputStyle}
+            />
+          )}
           <input
             className="tc-input"
             value={model}
@@ -138,13 +156,17 @@ export function KeyPrompt({ accent, onSave }: KeyPromptProps) {
               setModelEdited(true);
               setError(null);
             }}
-            placeholder={defaultModelFor(provider)}
+            placeholder={isClaudeCode ? "Default model (optional override, e.g. sonnet)" : defaultModelFor(provider)}
             type="text"
             aria-label="Model"
-            style={{ ...inputStyle, marginTop: 10 }}
+            style={{ ...inputStyle, marginTop: isClaudeCode ? 0 : 10 }}
           />
           <div style={{ fontSize: 12.5, color: colors.soft, marginTop: 8 }}>
-            Model used for plan revisions. The default is a current general-availability model.
+            {isClaudeCode
+              ? claudeCliAvailable
+                ? "Revisions run through your local Claude Code CLI — no API key needed."
+                : "Claude Code CLI was not found on this machine. Install it or pick another provider."
+              : "Model used for plan revisions. The default is a current general-availability model."}
           </div>
           {error ? (
             <div style={{ fontSize: 13.5, color: "#B4372E", marginTop: 10, lineHeight: 1.5 }}>{error}</div>
@@ -168,7 +190,7 @@ export function KeyPrompt({ accent, onSave }: KeyPromptProps) {
               fontWeight: 500
             }}
           >
-            {checking ? "Checking key…" : "Save key"}
+            {checking ? "Checking key…" : isClaudeCode ? "Use Claude Code" : "Save key"}
           </button>
         </div>
         <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 16 }}>
