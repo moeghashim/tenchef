@@ -1,0 +1,6 @@
+dist/
+node_modules/
+design/
+.claude/
+package-lock.json
+coverage/

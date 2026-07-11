@@ -1,13 +1,5 @@
 import { AUDIENCE, DIRECTION, FEATURES, METRIC, PLATFORMS, QUESTIONS, TIMELINE } from "./questions";
-import type {
-  Answers,
-  AppState,
-  BuildTask,
-  PendingComment,
-  PlanRevision,
-  ProductPlan,
-  TaskGroup
-} from "./types";
+import type { Answers, AppState, BuildTask, PendingComment, PlanRevision, ProductPlan, TaskGroup } from "./types";
 
 export type AppAction =
   | { type: "START" }
@@ -194,9 +186,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case "SELECT_VISUAL":
       return { ...state, answers: { ...state.answers, direction: action.value } };
     case "BACK":
-      return state.qIndex === 0
-        ? { ...state, screen: "start" }
-        : { ...state, qIndex: state.qIndex - 1 };
+      return state.qIndex === 0 ? { ...state, screen: "start" } : { ...state, qIndex: state.qIndex - 1 };
     case "NEXT": {
       if (state.qIndex >= QUESTIONS.length - 1) {
         const built = buildPlanFromAnswers(state.answers);

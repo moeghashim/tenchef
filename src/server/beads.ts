@@ -28,6 +28,8 @@ export interface BdListItem {
   group?: string;
 }
 
+export const MAX_LABEL_LENGTH = 200;
+
 export function groupToLabel(group: TaskGroup): string {
   if (group === "Foundation") return "foundation";
   if (group === "Core features") return "core";
@@ -39,6 +41,17 @@ export function labelToGroup(label: string): TaskGroup | null {
   if (normalized === "foundation") return "Foundation";
   if (normalized === "core" || normalized === "core features") return "Core features";
   if (normalized === "launch") return "Launch";
+  return null;
+}
+
+// Returns an error message if the label should be rejected, or null.
+// Rejects: non-string, empty, leading '-' (bd would parse as a flag), > 200 chars.
+export function validateBuildTaskLabel(label: unknown): string | null {
+  if (typeof label !== "string") return "Task label must be a string.";
+  const trimmed = label.trim();
+  if (!trimmed) return "Task label must not be empty.";
+  if (trimmed.startsWith("-")) return "Task label must not start with '-'.";
+  if (trimmed.length > MAX_LABEL_LENGTH) return `Task label must be at most ${MAX_LABEL_LENGTH} characters.`;
   return null;
 }
 
@@ -59,6 +72,12 @@ export function buildCloseArgs(id: string): string[] {
 
 export function buildReopenArgs(id: string): string[] {
   return ["update", id, "--status", "open"];
+}
+
+export function buildListArgs(): string[] {
+  // --all: closed issues drop out of the default listing, which would reset
+  // checked-off tasks on reload. --limit 0 lifts the default 50-issue cap.
+  return ["list", "--json", "--all", "--label", "tenchef", "--limit", "0"];
 }
 
 export function runBd(args: string[], cwd: string, env: NodeJS.ProcessEnv = process.env): Promise<BdRunResult> {
@@ -122,18 +141,14 @@ export async function setTaskClosed(cwd: string, id: string, done: boolean): Pro
   await runBd(done ? buildCloseArgs(id) : buildReopenArgs(id), cwd);
 }
 
-export function buildListArgs(): string[] {
-  // --all: closed issues drop out of the default listing, which would reset
-  // checked-off tasks on reload. --limit 0 lifts the default 50-issue cap.
-  return ["list", "--json", "--all", "--label", "tenchef", "--limit", "0"];
-}
-
 export async function listTenchefTasks(cwd: string): Promise<BuildTask[]> {
   if (!existsSync(path.join(cwd, ".beads"))) return [];
   try {
     const result = await runBd(buildListArgs(), cwd);
     return normalizeList(result.stdout);
   } catch {
+    // Older bd builds may not support --all/--label/--limit; fall back to the
+    // plain listing, then to reading the JSONL directly.
     try {
       const result = await runBd(["list", "--json"], cwd);
       return normalizeList(result.stdout);
@@ -146,13 +161,13 @@ export async function listTenchefTasks(cwd: string): Promise<BuildTask[]> {
 export function normalizeList(stdout: string): BuildTask[] {
   const parsed = JSON.parse(stdout || "[]") as unknown;
   const items = Array.isArray(parsed) ? parsed : [];
-  return items.flatMap((item, index) => {
-    const task = normalizeItem(item as BdListItem, index);
+  return items.flatMap((item) => {
+    const task = normalizeItem(item as BdListItem);
     return task ? [task] : [];
   });
 }
 
-function normalizeItem(item: BdListItem, index: number): BuildTask | null {
+function normalizeItem(item: BdListItem): BuildTask | null {
   const labels = Array.isArray(item.labels) ? item.labels : [];
   if (labels.length && !labels.includes("tenchef")) return null;
   const group = item.group ? labelToGroup(item.group) : labels.map(labelToGroup).find(Boolean);
@@ -162,7 +177,10 @@ function normalizeItem(item: BdListItem, index: number): BuildTask | null {
   if (!label || !id) return null;
   const status = (item.status || "").toLowerCase();
   return {
-    id: `bd-${index}`,
+    // Use the stable beadsId as the local id. Synthesizing `bd-${index}`
+    // meant a reorder in `bd list` would silently reshuffle React keys and
+    // task-toggle targets.
+    id,
     label,
     group,
     done: status === "closed" || status === "done" || status === "complete",
@@ -170,6 +188,11 @@ function normalizeItem(item: BdListItem, index: number): BuildTask | null {
   };
 }
 
+// Parses the stable id out of `bd create` stdout: JSON `{"id": "..."}`,
+// the bd >= 1.0 human-readable "✓ Created issue: <prefix>-<suffix> — <title>"
+// line, or a bare `PREFIX-suffix` (suffixes are not always numeric, e.g.
+// "d8k"). Returns undefined on anything else — no last-resort regex that
+// would grab the first word of an error message.
 export function parseCreatedId(stdout: string): string | undefined {
   const text = stdout.trim();
   if (!text) return undefined;
@@ -178,11 +201,9 @@ export function parseCreatedId(stdout: string): string | undefined {
     const value = parsed.id || parsed.issue?.id;
     return value ? String(value) : undefined;
   } catch {
-    // bd >= 1.0 prints "✓ Created issue: <prefix>-<suffix> — <title>"; older
-    // builds print the bare ID. Suffixes are not always numeric (e.g. "d8k").
-    const created = text.match(/Created issue:\s*(\S+)/i);
+    const created = text.match(/Created issue:?\s+(\S+)/i);
     if (created) return created[1];
-    const match = text.match(/[A-Za-z][A-Za-z0-9_]*-[A-Za-z0-9]+/);
+    const match = text.match(/^[A-Za-z][A-Za-z0-9_]*-[A-Za-z0-9]+$/m);
     return match?.[0];
   }
 }
@@ -194,10 +215,10 @@ async function readTasksFromJsonl(cwd: string): Promise<BuildTask[]> {
     return content
       .split("\n")
       .filter(Boolean)
-      .flatMap((line, index) => {
+      .flatMap((line) => {
         try {
           const item = JSON.parse(line) as BdListItem;
-          const task = normalizeItem(item, index);
+          const task = normalizeItem(item);
           return task ? [task] : [];
         } catch {
           return [];

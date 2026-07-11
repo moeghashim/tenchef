@@ -5,35 +5,18 @@ import { Plan } from "./components/Plan";
 import { Prd } from "./components/Prd";
 import { Start } from "./components/Start";
 import { TopBar } from "./components/TopBar";
-import { apiFetch, bootstrapToken, postJson } from "./api";
-import { DEFAULT_ANTHROPIC_MODEL } from "./llm/anthropic";
-import { DEFAULT_OPENAI_MODEL } from "./llm/openai";
+import { apiFetch, getConfig, postJson } from "./api";
 import { revisePlan } from "./llm/revise";
+import { loadKeySettingsFrom, saveKeySettingsTo } from "./state/keyStorage";
 import { appReducer, createInitialState } from "./state/reducer";
 import { buildPrdMarkdown } from "./state/prd";
-import type { AppState, BuildTask, KeySettings, LlmProvider } from "./state/types";
+import type { AppState, BuildTask, KeySettings } from "./state/types";
 import { DEFAULT_ACCENT, colors } from "./styles/tokens";
 
 const SESSION_KEY = "tenchef.session";
-const API_KEY_KEY = "tenchef.apiKey";
-const PROVIDER_KEY = "tenchef.provider";
-const MODEL_KEY = "tenchef.model";
-
-interface RuntimeConfig {
-  accent?: string;
-  claudeCli?: boolean;
-}
 
 function loadKeySettings(): KeySettings | null {
-  const apiKey = window.localStorage.getItem(API_KEY_KEY) || "";
-  const provider = window.localStorage.getItem(PROVIDER_KEY) as LlmProvider | null;
-  if (provider !== "anthropic" && provider !== "openai" && provider !== "claude-code") return null;
-  if (provider !== "claude-code" && !apiKey) return null;
-  const storedModel = window.localStorage.getItem(MODEL_KEY);
-  const model =
-    storedModel ??
-    (provider === "anthropic" ? DEFAULT_ANTHROPIC_MODEL : provider === "openai" ? DEFAULT_OPENAI_MODEL : "");
-  return { apiKey, provider, model };
+  return loadKeySettingsFrom(window.localStorage, window.sessionStorage);
 }
 
 function sanitizeSnapshot(state: AppState): AppState {
@@ -45,20 +28,11 @@ function loadSession(): AppState {
   if (!raw) return createInitialState();
   try {
     const parsed = JSON.parse(raw) as Partial<AppState>;
-    const base = createInitialState();
-    return {
-      ...base,
-      ...parsed,
-      sending: false,
-      pending: null,
-      revisionError: null
-    };
+    return sanitizeSnapshot({ ...createInitialState(), ...parsed });
   } catch {
     return createInitialState();
   }
 }
-
-bootstrapToken();
 
 export function App() {
   const [state, dispatch] = useReducer(appReducer, undefined, loadSession);
@@ -68,9 +42,8 @@ export function App() {
   const restoredRef = useRef(false);
 
   useEffect(() => {
-    fetch("/config")
-      .then((response) => (response.ok ? response.json() : {}))
-      .then((config: RuntimeConfig) => {
+    getConfig()
+      .then((config) => {
         if (config.accent) setAccent(config.accent);
         setClaudeCli(Boolean(config.claudeCli));
       })
@@ -137,9 +110,7 @@ export function App() {
   }, [state]);
 
   const saveKey = (settings: KeySettings) => {
-    window.localStorage.setItem(API_KEY_KEY, settings.apiKey);
-    window.localStorage.setItem(PROVIDER_KEY, settings.provider);
-    window.localStorage.setItem(MODEL_KEY, settings.model);
+    saveKeySettingsTo(window.localStorage, window.sessionStorage, settings);
     setKeySettings(settings);
   };
 

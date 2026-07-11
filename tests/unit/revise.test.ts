@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildRevisePrompt,
-  extractJsonObject,
-  revisePlanWithCaller,
-  validateRevision
-} from "../../src/web/llm/revise";
+import { buildRevisePrompt, extractJsonObject, revisePlanWithCaller, validateRevision } from "../../src/web/llm/revise";
 import type { PlanComment, ProductPlan } from "../../src/web/state/types";
 
 const VALID_REVISION = {
@@ -72,7 +67,41 @@ describe("revise prompt", () => {
   });
 
   it("extracts fenced provider JSON", () => {
-    expect(extractJsonObject("```json\n{\"productName\":\"Pulse\"}\n```")).toEqual({ productName: "Pulse" });
+    expect(extractJsonObject('```json\n{"productName":"Pulse"}\n```')).toEqual({ productName: "Pulse" });
+  });
+});
+
+describe("extractJsonObject — adversarial cases", () => {
+  it("extracts JSON from a markdown fence with trailing commentary after the fence", () => {
+    const input = '```json\n{"productName":"Pulse","summary":"Ok."}\n```\n\nThat\'s my revision — hope it helps!';
+    expect(extractJsonObject(input)).toEqual({ productName: "Pulse", summary: "Ok." });
+  });
+
+  it("extracts JSON embedded mid-sentence", () => {
+    const input =
+      'Here is the revision: {"productName":"Pulse","goals":["A","B","C"]} — let me know if you want changes.';
+    expect(extractJsonObject(input)).toEqual({ productName: "Pulse", goals: ["A", "B", "C"] });
+  });
+
+  it("throws (rather than returning a garbage value) when the response has no JSON at all", () => {
+    expect(() => extractJsonObject("Sorry, I can't help with that request right now.")).toThrow(SyntaxError);
+  });
+
+  it("throws when the response opens a brace but never closes it", () => {
+    expect(() => extractJsonObject("Here's my attempt: { unfinished")).toThrow(SyntaxError);
+  });
+
+  it("throws when the response contains multiple separate {} blocks that don't form valid JSON", () => {
+    // The current strategy grabs from the first `{` to the last `}`. When
+    // the model emits two unrelated objects, that slice is not valid JSON
+    // and should fail loudly rather than pick the wrong one.
+    expect(() => extractJsonObject('{"a":1} and then also {"b":2}')).toThrow(SyntaxError);
+  });
+
+  it("throws when the payload is a JSON array instead of an object", () => {
+    // The design prompt asks for an object; an array would break APPLY_REVISION.
+    // Better to reject than to spread wrongly-shaped values into the plan.
+    expect(() => extractJsonObject("[1, 2, 3]")).toThrow();
   });
 });
 
@@ -96,7 +125,7 @@ describe("revision validation", () => {
 
   it("retries once with the validation error, then applies the corrected response", async () => {
     const prompts: string[] = [];
-    const responses = ["{\"productName\": 42}", JSON.stringify(VALID_REVISION)];
+    const responses = ['{"productName": 42}', JSON.stringify(VALID_REVISION)];
     const revision = await revisePlanWithCaller(
       async (prompt) => {
         prompts.push(prompt);
@@ -112,8 +141,6 @@ describe("revision validation", () => {
   });
 
   it("throws when the retry is also invalid", async () => {
-    await expect(
-      revisePlanWithCaller(async () => "not json at all", TEST_PLAN, TEST_COMMENTS)
-    ).rejects.toThrow();
+    await expect(revisePlanWithCaller(async () => "not json at all", TEST_PLAN, TEST_COMMENTS)).rejects.toThrow();
   });
 });

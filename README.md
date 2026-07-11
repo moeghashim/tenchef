@@ -41,7 +41,7 @@ npx tenchef [directory]
 - `--port <n>` — pin the local server port
 - `--no-open` — skip auto-open (useful for CI or headless environments)
 
-Opens a browser to `http://127.0.0.1:<port>/#token=…`. The token authenticates this browser tab to the local API — requests without it (for example from another website you have open) are rejected, so nothing else can write files into your project while tenchef runs. If a tab loses authorization, reopen the URL printed in the terminal. The server auto-shuts down after 30 minutes idle.
+Opens a browser to `http://127.0.0.1:<port>`. The local API is protected by a per-session token (delivered to the app via same-origin `/config`, which other websites cannot read) plus Host and Origin checks, so nothing else — not even another website you have open — can write files into your project or drive `bd` while tenchef runs. The server auto-shuts down after 30 minutes idle.
 
 ## Design
 

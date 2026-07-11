@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { DEFAULT_ANTHROPIC_MODEL, validateAnthropicKey } from "../llm/anthropic";
-import { DEFAULT_OPENAI_MODEL, validateOpenAiKey } from "../llm/openai";
+import { validateAnthropicKey } from "../llm/anthropic";
+import { DEFAULT_ANTHROPIC_MODEL, DEFAULT_OPENAI_MODEL } from "../llm/models";
+import { validateOpenAiKey } from "../llm/openai";
 import type { KeySettings, LlmProvider } from "../state/types";
 import { ACCENT_OPTIONS, colors, fonts } from "../styles/tokens";
 
@@ -101,7 +102,8 @@ export function KeyPrompt({ accent, claudeCliAvailable, onSave }: KeyPromptProps
           Connect a model.
         </h1>
         <p style={{ fontSize: 16.5, lineHeight: 1.6, color: "#5B5B57", margin: "0 auto 30px", maxWidth: 450 }}>
-          Your key stays in this browser and is used only for direct plan revisions.
+          Your key stays in this browser session — cleared when you close the tab — and is used only for direct plan
+          revisions.
         </p>
         <div
           style={{

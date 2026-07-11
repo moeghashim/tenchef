@@ -1,6 +1,6 @@
 {
   "name": "tenchef",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A local PRD interview studio for AI-assisted product builds.",
   "type": "module",
   "license": "Apache-2.0",
@@ -29,7 +29,11 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "pretest": "npm run build",
     "test": "vitest run --config vitest.config.ts",
-    "prepublishOnly": "npm test"
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "verify": "npm run typecheck && npm run lint && npm test && npm run build",
+    "prepublishOnly": "npm run verify"
   },
   "dependencies": {
     "hono": "^4.6.16",
@@ -41,7 +45,11 @@
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^10.6.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.4",
     "typescript": "^5.7.2",
+    "typescript-eslint": "^8.62.1",
     "vite": "^6.0.7",
     "vitest": "^2.1.8"
   }

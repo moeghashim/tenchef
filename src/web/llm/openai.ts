@@ -1,4 +1,4 @@
-export const DEFAULT_OPENAI_MODEL = "gpt-5.1";
+import { DEFAULT_OPENAI_MODEL } from "./models";
 
 function headers(apiKey: string): Record<string, string> {
   return {
@@ -7,7 +7,11 @@ function headers(apiKey: string): Record<string, string> {
   };
 }
 
-export async function callOpenAi(apiKey: string, model: string, prompt: string): Promise<string> {
+export async function callOpenAi(
+  apiKey: string,
+  prompt: string,
+  model: string = DEFAULT_OPENAI_MODEL
+): Promise<string> {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: headers(apiKey),

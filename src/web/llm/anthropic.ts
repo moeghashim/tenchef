@@ -1,4 +1,4 @@
-export const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-5";
+import { DEFAULT_ANTHROPIC_MODEL } from "./models";
 
 function headers(apiKey: string): Record<string, string> {
   return {
@@ -9,12 +9,18 @@ function headers(apiKey: string): Record<string, string> {
   };
 }
 
-export async function callAnthropic(apiKey: string, model: string, prompt: string): Promise<string> {
+export async function callAnthropic(
+  apiKey: string,
+  prompt: string,
+  model: string = DEFAULT_ANTHROPIC_MODEL
+): Promise<string> {
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: headers(apiKey),
     body: JSON.stringify({
       model,
+      // Current Sonnet models think adaptively by default and thinking counts
+      // toward max_tokens, so leave generous headroom for the JSON revision.
       max_tokens: 8000,
       messages: [{ role: "user", content: prompt }]
     })

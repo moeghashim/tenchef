@@ -1,30 +1,28 @@
-const TOKEN_KEY = "tenchef.token";
-
-let cachedToken: string | null = null;
-
-export function bootstrapToken(): void {
-  const match = window.location.hash.match(/token=([A-Za-z0-9]+)/);
-  if (match) {
-    cachedToken = match[1];
-    window.sessionStorage.setItem(TOKEN_KEY, cachedToken);
-    window.history.replaceState(null, "", window.location.pathname + window.location.search);
-  } else {
-    cachedToken = window.sessionStorage.getItem(TOKEN_KEY);
-  }
+export interface TenchefConfig {
+  accent?: string;
+  token?: string;
+  claudeCli?: boolean;
 }
 
-export function getToken(): string | null {
-  return cachedToken;
+let configPromise: Promise<TenchefConfig> | null = null;
+
+// /config is same-origin-readable only (a foreign page can fire requests at
+// the local server but cannot read responses), so the per-session API token
+// is delivered here and attached to every local API call.
+export function getConfig(): Promise<TenchefConfig> {
+  if (!configPromise) {
+    configPromise = fetch("/config")
+      .then((response) => (response.ok ? (response.json() as Promise<TenchefConfig>) : {}))
+      .catch(() => ({}));
+  }
+  return configPromise;
 }
 
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const { token } = await getConfig();
   const headers = new Headers(init.headers);
-  if (cachedToken) headers.set("x-tenchef-token", cachedToken);
-  const response = await fetch(path, { ...init, headers });
-  if (response.status === 401) {
-    throw new Error("This tab is no longer authorized. Reopen the URL printed in your terminal.");
-  }
-  return response;
+  if (token) headers.set("x-tenchef-token", token);
+  return fetch(path, { ...init, headers });
 }
 
 export async function postJson<T>(path: string, body: unknown): Promise<T> {

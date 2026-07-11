@@ -60,9 +60,12 @@ async function startCli(projectDir: string, env: NodeJS.ProcessEnv): Promise<Run
   });
 
   const parsed = new URL(url);
-  const token = (parsed.hash.match(/token=([a-f0-9]+)/) || [])[1];
-  if (!token) throw new Error(`No token in printed URL: ${url}`);
-  running = { child, url: `${parsed.protocol}//${parsed.host}`, token };
+  const base = `${parsed.protocol}//${parsed.host}`;
+  const config = await fetch(`${base}/config`);
+  if (!config.ok) throw new Error(`GET /config failed with ${config.status}`);
+  const { token } = (await config.json()) as { token?: string };
+  if (!token) throw new Error("GET /config returned no token.");
+  running = { child, url: base, token };
   return running;
 }
 
@@ -91,7 +94,7 @@ describe("cli smoke", () => {
     expect(await list.json()).toEqual([]);
 
     const unauthorized = await fetch(`${cli.url}/bd/list`);
-    expect(unauthorized.status).toBe(401);
+    expect(unauthorized.status).toBe(403);
 
     const exited = waitForExit(cli.child);
     cli.child.kill("SIGINT");
@@ -99,53 +102,57 @@ describe("cli smoke", () => {
     running = null;
   });
 
-  it.skipIf(!hasRealBd())("runs the full generate flow against a real bd install", async () => {
-    const projectDir = await makeTempDir("tenchef-smoke-real-bd-");
-    const cli = await startCli(projectDir, { ...process.env });
+  it.skipIf(!hasRealBd())(
+    "runs the full generate flow against a real bd install",
+    async () => {
+      const projectDir = await makeTempDir("tenchef-smoke-real-bd-");
+      const cli = await startCli(projectDir, { ...process.env });
 
-    const init = await fetch(`${cli.url}/bd/init`, authed(cli.token, { method: "POST" }));
-    expect(init.status).toBe(200);
-    expect(existsSync(path.join(projectDir, ".beads"))).toBe(true);
+      const init = await fetch(`${cli.url}/bd/init`, authed(cli.token, { method: "POST" }));
+      expect(init.status).toBe(200);
+      expect(existsSync(path.join(projectDir, ".beads"))).toBe(true);
 
-    const tasks = buildTasks(["Search", "Notifications"], "Activation");
-    const create = await fetch(
-      `${cli.url}/bd/create`,
-      authed(cli.token, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ tasks })
-      })
-    );
-    expect(create.status).toBe(200);
-    const created = (await create.json()) as { tasks: typeof tasks };
-    expect(created.tasks).toHaveLength(tasks.length);
-    expect(created.tasks.every((task) => task.beadsId)).toBe(true);
+      const tasks = buildTasks(["Search", "Notifications"], "Activation");
+      const create = await fetch(
+        `${cli.url}/bd/create`,
+        authed(cli.token, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ tasks })
+        })
+      );
+      expect(create.status).toBe(200);
+      const created = (await create.json()) as { tasks: typeof tasks };
+      expect(created.tasks).toHaveLength(tasks.length);
+      expect(created.tasks.every((task) => task.beadsId)).toBe(true);
 
-    const target = created.tasks.find((task) => task.group === "Core features");
-    const close = await fetch(
-      `${cli.url}/bd/close`,
-      authed(cli.token, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ id: target?.beadsId, done: true })
-      })
-    );
-    expect(close.status).toBe(200);
+      const target = created.tasks.find((task) => task.group === "Core features");
+      const close = await fetch(
+        `${cli.url}/bd/close`,
+        authed(cli.token, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ id: target?.beadsId, done: true })
+        })
+      );
+      expect(close.status).toBe(200);
 
-    const list = await fetch(`${cli.url}/bd/list`, authed(cli.token));
-    expect(list.status).toBe(200);
-    const listed = (await list.json()) as typeof tasks;
-    expect(listed.find((task) => task.beadsId === target?.beadsId)?.done).toBe(true);
+      const list = await fetch(`${cli.url}/bd/list`, authed(cli.token));
+      expect(list.status).toBe(200);
+      const listed = (await list.json()) as typeof tasks;
+      expect(listed.find((task) => task.beadsId === target?.beadsId)?.done).toBe(true);
 
-    const write = await fetch(
-      `${cli.url}/fs/write`,
-      authed(cli.token, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ path: "PRD.md", content: "# Smoke PRD\n" })
-      })
-    );
-    expect(write.status).toBe(200);
-    expect(existsSync(path.join(projectDir, "PRD.md"))).toBe(true);
-  }, 30000);
+      const write = await fetch(
+        `${cli.url}/fs/write`,
+        authed(cli.token, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ path: "PRD.md", content: "# Smoke PRD\n" })
+        })
+      );
+      expect(write.status).toBe(200);
+      expect(existsSync(path.join(projectDir, "PRD.md"))).toBe(true);
+    },
+    30000
+  );
 });
