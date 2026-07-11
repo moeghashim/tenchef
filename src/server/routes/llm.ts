@@ -14,11 +14,24 @@ export function hasClaudeCli(env: NodeJS.ProcessEnv = process.env): Promise<bool
   });
 }
 
+// When tenchef itself runs inside a Claude Code session, the inherited
+// CLAUDECODE / CLAUDE_CODE_* markers make the nested CLI think it's a child
+// session and can break its credential resolution. Strip them; leave user
+// auth config (ANTHROPIC_API_KEY etc.) untouched.
+function cleanClaudeEnv(env: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+  const cleaned: NodeJS.ProcessEnv = {};
+  for (const [key, value] of Object.entries(env)) {
+    if (key === "CLAUDECODE" || key.startsWith("CLAUDE_CODE_")) continue;
+    cleaned[key] = value;
+  }
+  return cleaned;
+}
+
 export function runClaudeCli(prompt: string, model: string | undefined, timeoutMs: number): Promise<string> {
   return new Promise((resolve, reject) => {
     const args = ["-p", "--output-format", "text"];
     if (model) args.push("--model", model);
-    const child = spawn("claude", args, { stdio: ["pipe", "pipe", "pipe"] });
+    const child = spawn("claude", args, { stdio: ["pipe", "pipe", "pipe"], env: cleanClaudeEnv() });
 
     let stdout = "";
     let stderr = "";

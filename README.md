@@ -6,7 +6,9 @@ A local PRD interview studio for AI-assisted product builds. Answer eight visual
 
 ## Status
 
-**v0.2.0** — typecheck, unit, and integration tests pass, including an end-to-end smoke test that boots the built CLI and drives the full init → create → close → list flow against a real `bd` install (verified with bd 1.0.5).
+**v0.2.1** — typecheck, lint, unit, security, and integration tests pass (`npm run verify`), including an end-to-end smoke test that boots the built CLI and drives the full init → create → close → list flow against a real `bd` install (verified with bd 1.0.5).
+
+Known issue: revising the plan *after* a PRD has been generated rebuilds the task list without its beads IDs, so generating again creates duplicate beads issues. Until this is fixed, finish your comment rounds before the first "Generate PRD".
 
 ## What it does
 
